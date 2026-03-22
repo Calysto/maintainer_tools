@@ -31,6 +31,40 @@ Installs Python, Poetry (with OS-keyed cache), `just`, and project dependencies.
     python-version: "3.12"
 ```
 
+A full test matrix workflow using `hynek/build-and-inspect-python-package` to derive the supported Python versions:
+
+```yaml
+jobs:
+  build:
+    name: Build & inspect package
+    runs-on: ubuntu-latest
+    outputs:
+      supported_python_classifiers_json_array: ${{ steps.baipp.outputs.supported_python_classifiers_json_array }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: hynek/build-and-inspect-python-package@v2
+        id: baipp
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    needs: [build]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJSON(needs.build.outputs.supported_python_classifiers_json_array) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: calysto/maintainer_tools/actions/base-setup@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: just test
+```
+
 ______________________________________________________________________
 
 ### `enforce-label`
@@ -67,7 +101,7 @@ ______________________________________________________________________
 
 ### `release`
 
-Runs `base-setup`, bumps the package version, updates `CHANGELOG.md`, commits the changes, creates a GitHub release, then bumps to the next `.dev` version. Supports dry-run mode for testing.
+Bumps the package version, updates `CHANGELOG.md`, commits the changes, creates a GitHub release, then bumps to the next `.dev` version. Supports dry-run mode for testing. **Runs `base-setup` internally** — do not call `base-setup` before this action.
 
 **Inputs**
 
@@ -89,7 +123,6 @@ Runs `base-setup`, bumps the package version, updates `CHANGELOG.md`, commits th
 
 ```yaml
 - uses: actions/checkout@v6
-- uses: calysto/maintainer_tools/actions/base-setup@v1
 - uses: calysto/maintainer_tools/actions/release@v1
   with:
     version: ${{ inputs.version }}
@@ -99,11 +132,70 @@ Runs `base-setup`, bumps the package version, updates `CHANGELOG.md`, commits th
     ref: ${{ github.ref_name }}
 ```
 
+A full release workflow with build and PyPI publish steps:
+
+```yaml
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: calysto/maintainer_tools/actions/release@v1
+        id: release
+        with:
+          version: ${{ inputs.version }}
+          dry_run: ${{ inputs.dry_run }}
+          app_id: ${{ vars.APP_ID }}
+          app_private_key: ${{ secrets.APP_PRIVATE_KEY }}
+          ref: ${{ github.ref_name }}
+
+  build:
+    name: Build & verify package
+    needs: [release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: hynek/build-and-inspect-python-package@v2
+
+  publish:
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download packages built by build-and-inspect-python-package
+        uses: actions/download-artifact@v4
+        with:
+          name: Packages
+          path: dist
+      - name: Upload package to Test PyPI
+        uses: pypa/gh-action-pypi-publish@v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: ${{ inputs.dry_run }}
+      - name: Upload package to PyPI
+        if: ${{ !inputs.dry_run }}
+        uses: pypa/gh-action-pypi-publish@v1
+```
+
 ______________________________________________________________________
 
 ### `test-minimum-versions`
 
-Pins all dependencies to their minimum allowed versions (as declared in `pyproject.toml`) and runs the test suite. Assumes `base-setup` has already run.
+Pins all dependencies to their minimum allowed versions (as declared in `pyproject.toml`) and runs the test suite. **Runs `base-setup` internally** — do not call `base-setup` before this action.
 
 **Inputs**
 
@@ -115,7 +207,6 @@ Pins all dependencies to their minimum allowed versions (as declared in `pyproje
 
 ```yaml
 - uses: actions/checkout@v6
-- uses: calysto/maintainer_tools/actions/base-setup@v1
 - uses: calysto/maintainer_tools/actions/test-minimum-versions@v1
   with:
     command: "just test"
@@ -125,7 +216,7 @@ ______________________________________________________________________
 
 ### `test-sdist`
 
-Downloads the `Packages` artifact produced by `hynek/build-and-inspect-python-package`, unpacks the sdist, and runs the test suite from within it. Assumes `base-setup` has already run.
+Downloads the `Packages` artifact produced by `hynek/build-and-inspect-python-package`, unpacks the sdist, and runs the test suite from within it. **Runs `base-setup` internally** — do not call `base-setup` before this action.
 
 **Inputs**
 
@@ -136,11 +227,21 @@ Downloads the `Packages` artifact produced by `hynek/build-and-inspect-python-pa
 **Usage**
 
 ```yaml
-- uses: actions/checkout@v6
-- uses: calysto/maintainer_tools/actions/base-setup@v1
-- uses: calysto/maintainer_tools/actions/test-sdist@v1
-  with:
-    command: "just test"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hynek/build-and-inspect-python-package@v2
+
+  test-sdist:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: calysto/maintainer_tools/actions/test-sdist@v1
+        with:
+          command: "just test"
 ```
 
 ______________________________________________________________________
