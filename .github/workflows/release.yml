@@ -87,12 +87,7 @@ jobs:
     permissions:
       contents: write
     # Only run for stable releases (version contains no letters, e.g. 1.0.0 not 1.0.0a1)
-    if: |
-      ${{ !inputs.dry_run && github.event_name != 'schedule' &&
-          !contains(needs.release.outputs.tag, 'a') &&
-          !contains(needs.release.outputs.tag, 'b') &&
-          !contains(needs.release.outputs.tag, 'rc') &&
-          !contains(needs.release.outputs.tag, 'dev') }}
+    if: ${{ !inputs.dry_run && github.event_name != 'schedule' && !contains(needs.release.outputs.tag, 'a') && !contains(needs.release.outputs.tag, 'b') && !contains(needs.release.outputs.tag, 'rc') && !contains(needs.release.outputs.tag, 'dev') }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
