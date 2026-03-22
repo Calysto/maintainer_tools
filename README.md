@@ -101,7 +101,7 @@ ______________________________________________________________________
 
 ### `release`
 
-Bumps the package version, updates `CHANGELOG.md`, commits the changes, creates a GitHub release, then bumps to the next `.dev` version. Supports dry-run mode for testing. **Runs `base-setup` internally** — do not call `base-setup` before this action.
+Bumps the package version, updates `CHANGELOG.md`, commits the changes, creates a GitHub release, then bumps to the next `.dev` version. Supports dry-run mode for testing. Requires `base-setup` to run before this action.
 
 **Inputs**
 
@@ -123,6 +123,7 @@ Bumps the package version, updates `CHANGELOG.md`, commits the changes, creates 
 
 ```yaml
 - uses: actions/checkout@v6
+- uses: calysto/maintainer_tools/actions/base-setup@v1
 - uses: calysto/maintainer_tools/actions/release@v1
   with:
     version: ${{ inputs.version }}
@@ -147,6 +148,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - uses: calysto/maintainer_tools/actions/base-setup@v1
       - uses: calysto/maintainer_tools/actions/release@v1
         id: release
         with:
@@ -195,7 +197,7 @@ ______________________________________________________________________
 
 ### `test-minimum-versions`
 
-Pins all dependencies to their minimum allowed versions (as declared in `pyproject.toml`) and runs the test suite. **Runs `base-setup` internally** — do not call `base-setup` before this action.
+Pins all dependencies to their minimum allowed versions (as declared in `pyproject.toml`) and runs the test suite. Requires `base-setup` to run before this action.
 
 **Inputs**
 
@@ -207,6 +209,7 @@ Pins all dependencies to their minimum allowed versions (as declared in `pyproje
 
 ```yaml
 - uses: actions/checkout@v6
+- uses: calysto/maintainer_tools/actions/base-setup@v1
 - uses: calysto/maintainer_tools/actions/test-minimum-versions@v1
   with:
     command: "just test"
@@ -216,7 +219,7 @@ ______________________________________________________________________
 
 ### `test-sdist`
 
-Downloads the `Packages` artifact produced by `hynek/build-and-inspect-python-package`, unpacks the sdist, and runs the test suite from within it. **Runs `base-setup` internally** — do not call `base-setup` before this action.
+Downloads the `Packages` artifact produced by `hynek/build-and-inspect-python-package`, unpacks the sdist, and runs the test suite from within it. Requires `base-setup` to run before this action.
 
 **Inputs**
 
@@ -239,6 +242,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: calysto/maintainer_tools/actions/base-setup@v1
       - uses: calysto/maintainer_tools/actions/test-sdist@v1
         with:
           command: "just test"
