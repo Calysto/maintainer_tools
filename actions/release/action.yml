@@ -195,17 +195,19 @@ runs:
           TARGET="$REF"
           DRAFT=""
         fi
-        gh release create "v$VERSION" \
-          --title "$VERSION" \
-          --notes "$CHANGELOG_BODY" \
-          --target "$TARGET" \
-          $DRAFT
+        IS_DRAFT=false
         if [ -n "$DRAFT" ]; then
-          # Delete the most recent draft release.
-          REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-          gh api "repos/$REPO/releases" \
-            | jq -r '[.[] | select(.draft == true)] | sort_by(.created_at) | last | .id' \
-            | xargs -I {} gh api -X DELETE "repos/$REPO/releases/{}"
+          IS_DRAFT=true
+        fi
+        RELEASE_ID=$(gh api "repos/$REPOSITORY/releases" \
+          -f tag_name="v$VERSION" \
+          -f name="$VERSION" \
+          -f body="$CHANGELOG_BODY" \
+          -f target_commitish="$TARGET" \
+          -F draft=$IS_DRAFT \
+          --jq '.id')
+        if [ "$IS_DRAFT" = "true" ]; then
+          gh api -X DELETE "repos/$REPOSITORY/releases/$RELEASE_ID"
         fi
         echo "::endgroup::"
 
