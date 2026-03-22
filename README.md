@@ -6,7 +6,7 @@ Reusable GitHub Actions for Calysto packages. All actions are available via the 
 uses: calysto/maintainer_tools/actions/<name>@v1
 ```
 
-The `v1` tag always points to the latest stable commit and is updated manually via the [Update v1 Tag](.github/workflows/update-v1-tag.yml) workflow.
+The `v1` tag always points to the latest stable commit and is updated automatically on each stable release.
 
 ______________________________________________________________________
 
@@ -248,10 +248,10 @@ ______________________________________________________________________
 
 ## Tag Management
 
-The `v1` floating tag is maintained manually. After merging stable changes, run the **Update v1 Tag** workflow from the Actions tab. It will:
+The `v1` floating tag is updated automatically as part of the release workflow. After a stable release (any version without pre-release markers like `a`, `b`, `rc`, or `dev`), the `update-v1-tag` job will:
 
 1. Delete the existing `v1` tag locally and remotely
-1. Re-create `v1` at the current `HEAD`
+1. Re-create `v1` at the release commit
 1. Push the updated tag
 
-This requires a GitHub App with `contents: write` permission configured in the `release` environment (`APP_ID` variable and `APP_PRIVATE_KEY` secret).
+Pre-release versions (e.g. `1.0.0a1`, `1.0.0rc2`) will not update the `v1` tag.
