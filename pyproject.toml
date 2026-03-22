@@ -2,7 +2,7 @@
 
 [project]
 name = "calysto-maintainer-tools"
-version = "0.1.0rc0"
+version = "0.1.0rc1"
 description = "GitHub Actions and tools for Calysto packages"
 authors = [{ name = "Calysto" }]
 readme = "README.md"
