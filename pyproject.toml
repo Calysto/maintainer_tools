@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "maintainer-tools"
+version = "0.1.0.dev0"
+description = "GitHub Actions and tools for Calysto packages"
+authors = ["Calysto"]
+requires-python = ">=3.10"
+
+[tool.poetry.dependencies]
+python = ">=3.10"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0"
+pre-commit = ">=3.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
