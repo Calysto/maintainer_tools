@@ -1,5 +1,5 @@
 name: Release
-description: Bumps version, updates changelog, creates GitHub release
+description: Bumps version, updates changelog, and creates GitHub release
 
 inputs:
   version:
@@ -30,8 +30,6 @@ outputs:
 runs:
   using: composite
   steps:
-    - uses: ./actions/base-setup
-
     - name: Validate version input
       shell: bash
       env:
