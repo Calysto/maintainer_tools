@@ -1,12 +1,12 @@
 [tool.poetry]
+package-mode = false
+
+[project]
 name = "maintainer-tools"
 version = "0.1.0.dev0"
 description = "GitHub Actions and tools for Calysto packages"
-authors = ["Calysto"]
+authors = [{ name = "Calysto" }]
 requires-python = ">=3.10"
-
-[tool.poetry.dependencies]
-python = ">=3.10"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0"

@@ -2,7 +2,7 @@ install:
     poetry install
 
 test:
-    pytest tests/ -v
+    poetry run pytest tests/ -v
 
 pre-commit *args:
-    pre-commit run --all-files {{args}}
+    poetry run pre-commit run --all-files {{args}}
