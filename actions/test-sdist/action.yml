@@ -1,5 +1,5 @@
 name: Test SDist
-description: Downloads the sdist artifact, unpacks it, and runs the test suite
+description: Runs base-setup, downloads the sdist artifact, unpacks it, and runs the test suite
 
 inputs:
   command:
@@ -10,6 +10,8 @@ inputs:
 runs:
   using: composite
   steps:
+    - uses: ./actions/base-setup
+
     - uses: actions/download-artifact@v4
       with:
         name: Packages

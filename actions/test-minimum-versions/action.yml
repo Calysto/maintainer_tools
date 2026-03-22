@@ -1,6 +1,5 @@
 name: Test Minimum Versions
-description: Pins all dependencies to their minimum allowed versions and runs the test suite.
-  Assumes base-setup has already been run.
+description: Runs base-setup, pins all dependencies to their minimum allowed versions, and runs the test suite.
 
 inputs:
   command:
@@ -11,6 +10,8 @@ inputs:
 runs:
   using: composite
   steps:
+    - uses: ./actions/base-setup
+
     - name: Force the use of minimum versions
       shell: bash
       run: |

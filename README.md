@@ -67,7 +67,7 @@ jobs:
 
 ### `release`
 
-Bumps the package version, updates `CHANGELOG.md`, commits the changes, creates a GitHub release, then bumps to the next `.dev` version. Supports dry-run mode for testing.
+Runs `base-setup`, bumps the package version, updates `CHANGELOG.md`, commits the changes, creates a GitHub release, then bumps to the next `.dev` version. Supports dry-run mode for testing.
 
 **Inputs**
 

@@ -30,6 +30,8 @@ outputs:
 runs:
   using: composite
   steps:
+    - uses: ./actions/base-setup
+
     - name: Validate version input
       shell: bash
       env:
