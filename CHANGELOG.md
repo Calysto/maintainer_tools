@@ -1,3 +1,6 @@
-## 0.1.0rc1
+## 1.0.0
 
-- no changes
+## Dependency updates
+
+- Bump the actions group with 2 updates
+  - PR: #6
