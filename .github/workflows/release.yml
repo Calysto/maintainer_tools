@@ -17,6 +17,7 @@ on:
 
 jobs:
   release:
+    if: github.event_name != 'schedule' || github.repository == 'Calysto/maintainer_tools'
     runs-on: ubuntu-latest
     environment: release
     permissions:
