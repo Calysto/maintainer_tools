@@ -18,6 +18,10 @@ inputs:
     required: false
     default: ""
     description: "GitHub App private key (not required for dry_run)"
+  changelog_body:
+    required: false
+    default: ""
+    description: "Custom changelog body to use instead of the auto-generated one"
   ref:
     required: true
     description: "Branch to push commits back to (when not dry_run)"
@@ -109,6 +113,7 @@ runs:
 
     - name: Generate changelog
       id: changelog
+      if: inputs.changelog_body == ''
       uses: mikepenz/release-changelog-builder-action@a34a8009a9588bb86b02a873cf592440e96a5da8  # v6.1.1
       with:
         toTag: "HEAD"
@@ -159,7 +164,7 @@ runs:
     - name: Handle changelog
       shell: bash
       env:
-        CHANGELOG_BODY: ${{ steps.changelog.outputs.changelog }}
+        CHANGELOG_BODY: ${{ inputs.changelog_body != '' && inputs.changelog_body || steps.changelog.outputs.changelog }}
       run: |
         echo "::group::Commands"
         python3 "$GITHUB_ACTION_PATH/update_changelog.py"
@@ -187,7 +192,7 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        CHANGELOG_BODY: ${{ steps.changelog.outputs.changelog }}
+        CHANGELOG_BODY: ${{ inputs.changelog_body != '' && inputs.changelog_body || steps.changelog.outputs.changelog }}
       run: |
         echo "::group::Commands"
         if [ "$DRY_RUN" = "true" ]; then

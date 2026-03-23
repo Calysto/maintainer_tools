@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: false
+      changelog_body:
+        description: "Custom changelog body to use instead of the auto-generated one"
+        required: false
+        type: string
+        default: ""
   schedule:
     - cron: "0 9 * * *"
 
@@ -37,6 +42,7 @@ jobs:
           app_id: ${{ vars.APP_ID }}
           app_private_key: ${{ secrets.APP_PRIVATE_KEY }}
           ref: ${{ github.ref_name }}
+          changelog_body: ${{ inputs.changelog_body }}
 
   # Build the package from the release tag so the artifact matches what was released.
   build-package:
