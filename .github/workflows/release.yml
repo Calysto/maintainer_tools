@@ -13,7 +13,7 @@ on:
         type: boolean
         default: false
       changelog_body:
-        description: "Custom changelog body to use instead of the auto-generated one"
+        description: "Custom release notes (overrides auto-generated changelog). Use \\n for newlines, or trigger via 'gh workflow run' for real multiline input."
         required: false
         type: string
         default: ""

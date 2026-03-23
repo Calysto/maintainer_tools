@@ -21,7 +21,7 @@ inputs:
   changelog_body:
     required: false
     default: ""
-    description: "Custom changelog body to use instead of the auto-generated one"
+    description: "Custom release notes to use instead of the auto-generated changelog. The GitHub web UI strips newlines from text inputs — use \\n escape sequences as a workaround, or trigger via 'gh workflow run' which supports real newlines."
   ref:
     required: true
     description: "Branch to push commits back to (when not dry_run)"
@@ -161,10 +161,27 @@ runs:
         IS_PRERELEASE=$(python3 "$GITHUB_ACTION_PATH/detect_prerelease.py" "$VERSION")
         echo "IS_PRERELEASE=$IS_PRERELEASE" >> "$GITHUB_ENV"
 
-    - name: Handle changelog
+    - name: Resolve changelog body
       shell: bash
       env:
-        CHANGELOG_BODY: ${{ inputs.changelog_body != '' && inputs.changelog_body || steps.changelog.outputs.changelog }}
+        USER_CHANGELOG_BODY: ${{ inputs.changelog_body }}
+        GENERATED_CHANGELOG_BODY: ${{ steps.changelog.outputs.changelog }}
+      run: |
+        if [ -n "$USER_CHANGELOG_BODY" ]; then
+          # Convert literal \n escape sequences to real newlines so users can
+          # paste markdown into the single-line workflow_dispatch input field.
+          BODY=$(printf '%s' "$USER_CHANGELOG_BODY" | sed 's/\\n/\n/g')
+        else
+          BODY="$GENERATED_CHANGELOG_BODY"
+        fi
+        {
+          echo 'CHANGELOG_BODY<<CHANGELOG_EOF'
+          printf '%s\n' "$BODY"
+          echo 'CHANGELOG_EOF'
+        } >> "$GITHUB_ENV"
+
+    - name: Handle changelog
+      shell: bash
       run: |
         echo "::group::Commands"
         python3 "$GITHUB_ACTION_PATH/update_changelog.py"
@@ -192,7 +209,6 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        CHANGELOG_BODY: ${{ inputs.changelog_body != '' && inputs.changelog_body || steps.changelog.outputs.changelog }}
       run: |
         echo "::group::Commands"
         if [ "$DRY_RUN" = "true" ]; then

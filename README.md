@@ -111,6 +111,7 @@ Bumps the package version, updates `CHANGELOG.md`, commits the changes, creates 
 | `dry_run` | No | `"false"` | If `"true"`, creates a draft release then deletes it and does not push changes. |
 | `app_id` | No | `""` | GitHub App ID for authenticated pushes (not required for dry runs). |
 | `app_private_key` | No | `""` | GitHub App private key (not required for dry runs). |
+| `changelog_body` | No | `""` | Custom release notes to use instead of the auto-generated changelog. See [Providing custom release notes](#providing-custom-release-notes). |
 | `ref` | Yes | — | Branch to push commits back to (ignored when `dry_run` is `"true"`). |
 
 **Outputs**
@@ -192,6 +193,32 @@ jobs:
         if: ${{ !inputs.dry_run }}
         uses: pypa/gh-action-pypi-publish@v1
 ```
+
+**Providing custom release notes**
+
+By default the action auto-generates the changelog from PR titles and labels. Pass `changelog_body` to supply your own release notes instead.
+
+The GitHub Actions web UI only provides a single-line text field, so pasting multi-line markdown directly will have its newlines stripped by the browser. There are two ways to work around this:
+
+- **Recommended — use the CLI.** `gh workflow run` accepts real newlines:
+
+  ```bash
+  gh workflow run release.yml \
+    -f version=patch \
+    -f changelog_body="## Highlights
+
+  MetaKernel 1.0 is a major release.
+
+  ## New Features
+
+  - DisplayData() for raw MIME bundle display (#211)"
+  ```
+
+- **Use `\n` escape sequences in the web UI.** The action converts literal `\n` strings to real newlines, so you can type or paste a single-line string:
+
+  ```
+  ## Highlights\n\nMetaKernel 1.0 is a major release.\n\n## New Features\n\n- DisplayData() for raw MIME bundle display (#211)
+  ```
 
 ______________________________________________________________________
 
