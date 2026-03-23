@@ -91,11 +91,28 @@ runs:
         git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}"
         echo "::endgroup::"
 
+    - name: Set IS_PRERELEASE and FROM_TAG
+      shell: bash
+      env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token }}
+      run: |
+        IS_PRERELEASE=$(python3 "$GITHUB_ACTION_PATH/detect_prerelease.py" "$VERSION")
+        echo "IS_PRERELEASE=$IS_PRERELEASE" >> "$GITHUB_ENV"
+        if [ "$IS_PRERELEASE" = "true" ]; then
+          FROM_TAG=$(gh api "repos/$REPOSITORY/releases" \
+            --jq 'first | .tag_name // ""')
+        else
+          FROM_TAG=$(gh api "repos/$REPOSITORY/releases" \
+            --jq '[.[] | select(.prerelease == false)] | first | .tag_name // ""')
+        fi
+        echo "FROM_TAG=$FROM_TAG" >> "$GITHUB_ENV"
+
     - name: Generate changelog
       id: changelog
       uses: mikepenz/release-changelog-builder-action@a34a8009a9588bb86b02a873cf592440e96a5da8  # v6.1.1
       with:
         toTag: "HEAD"
+        fromTag: ${{ env.FROM_TAG }}
         ignorePreReleases: "true"
         token: ${{ steps.app-token.outputs.token }}
         configurationJson: |
@@ -133,32 +150,19 @@ runs:
         echo "VERSION=$(poetry version --short)" >> "$GITHUB_ENV"
         echo "::endgroup::"
 
+    - name: Resolve IS_PRERELEASE
+      shell: bash
+      run: |
+        IS_PRERELEASE=$(python3 "$GITHUB_ACTION_PATH/detect_prerelease.py" "$VERSION")
+        echo "IS_PRERELEASE=$IS_PRERELEASE" >> "$GITHUB_ENV"
+
     - name: Handle changelog
       shell: bash
       env:
         CHANGELOG_BODY: ${{ steps.changelog.outputs.changelog }}
       run: |
         echo "::group::Commands"
-        python3 - <<'PYEOF'
-        import os
-        version = os.environ["VERSION"]
-        body = os.environ["CHANGELOG_BODY"]
-        with open("CHANGELOG.md") as f:
-            lines = f.readlines()
-        # Find the first blank line after the top-level # header
-        insert_at = None
-        for i, line in enumerate(lines):
-            if line.startswith("# "):
-                for j in range(i + 1, len(lines)):
-                    if lines[j].strip() == "":
-                        insert_at = j + 1
-                        break
-                break
-        new_entry = [f"## {version}\n", "\n", body.rstrip("\n") + "\n", "\n"]
-        lines[insert_at:insert_at] = new_entry
-        with open("CHANGELOG.md", "w") as f:
-            f.writelines(lines)
-        PYEOF
+        python3 "$GITHUB_ACTION_PATH/update_changelog.py"
         echo "## ${VERSION}" >> $GITHUB_STEP_SUMMARY
         echo "${CHANGELOG_BODY}" >> $GITHUB_STEP_SUMMARY
         pipx run mdformat CHANGELOG.md
@@ -203,6 +207,7 @@ runs:
           -f body="$CHANGELOG_BODY" \
           -f target_commitish="$TARGET" \
           -F draft=$IS_DRAFT \
+          -F prerelease=$IS_PRERELEASE \
           --jq '.id')
         if [ "$IS_DRAFT" = "true" ]; then
           gh api -X DELETE "repos/$REPOSITORY/releases/$RELEASE_ID"

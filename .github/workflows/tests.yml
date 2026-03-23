@@ -87,6 +87,19 @@ jobs:
           dry_run: "true"
           ref: ${{ github.head_ref }}
 
+  test_scripts:
+    if: github.event_name != 'schedule' || github.repository == 'Calysto/maintainer_tools'
+    name: Test Release Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Test detect_prerelease.py
+        run: bash actions/release/test_detect_prerelease.sh
+      - name: Test update_changelog.py
+        run: bash actions/release/test_update_changelog.sh
+
   static:
     if: github.event_name != 'schedule' || github.repository == 'Calysto/maintainer_tools'
     runs-on: ubuntu-latest
@@ -105,6 +118,7 @@ jobs:
       - test_sdist
       - test_minimum_versions
       - test_release
+      - test_scripts
       - static
     runs-on: ubuntu-latest
     steps:
