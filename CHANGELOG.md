@@ -1,6 +1,6 @@
-## 1.0.0
+## 1.0.1
 
-## Dependency updates
+## Bugs Fixed
 
-- Bump the actions group with 2 updates
-  - PR: #6
+- Remove internal base-setup calls from composite actions
+  - PR: #8
