@@ -79,8 +79,8 @@ jobs:
         uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
         with:
           repository-url: https://test.pypi.org/legacy/
-          skip-existing: ${{ inputs.dry_run }}
-          verbose: ${{ inputs.dry_run }}
+          skip-existing: ${{ github.event_name == 'schedule' && 'true' || inputs.dry_run }}
+          verbose: ${{ github.event_name == 'schedule' && 'true' || inputs.dry_run }}
 
   update-v1-tag:
     needs: [publish, release]
