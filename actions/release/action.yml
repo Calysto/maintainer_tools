@@ -206,7 +206,11 @@ runs:
       shell: bash
       run: |
         echo "::group::Commands"
-        git add pyproject.toml CHANGELOG.md
+        if [ "$IS_PRERELEASE" = "true" ]; then
+          git add pyproject.toml
+        else
+          git add pyproject.toml CHANGELOG.md
+        fi
         git commit -m "Release $VERSION"
         if [ "$DRY_RUN" = "true" ]; then
           echo "Not pushing changes"
@@ -284,6 +288,10 @@ runs:
         fi
         if [ "$DRY_RUN" = "true" ]; then
           printf "\n\n## Post Version (not pushed)\n\n%s\n" "${VERSION}" >> $GITHUB_STEP_SUMMARY
+          printf "\n\n## GitHub Release\n\nNot created (dry run)\n" >> $GITHUB_STEP_SUMMARY
+        elif [ "$IS_PRERELEASE" = "true" ]; then
+          printf "\n\n## Post Version\n\n%s\n" "${VERSION}" >> $GITHUB_STEP_SUMMARY
+          printf "\n\n## GitHub Release\n\nhttps://github.com/%s/releases/tag/v%s (prerelease)\n" "${REPOSITORY}" "${RELEASE_VERSION}" >> $GITHUB_STEP_SUMMARY
         else
           printf "\n\n## Post Version\n\n%s\n" "${VERSION}" >> $GITHUB_STEP_SUMMARY
           printf "\n\n## GitHub Release\n\nhttps://github.com/%s/releases/tag/v%s\n" "${REPOSITORY}" "${RELEASE_VERSION}" >> $GITHUB_STEP_SUMMARY
