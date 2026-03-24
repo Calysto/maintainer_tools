@@ -197,7 +197,7 @@ runs:
           echo "## Changelog"
           echo ""
           echo "### ${VERSION}"
-          printf '%s\n' "${CHANGELOG_BODY}" | sed 's/^#/##/'
+          printf '%s\n' "${CHANGELOG_BODY}" | sed 's/^#/###/'
         } >> $GITHUB_STEP_SUMMARY
         pipx run mdformat CHANGELOG.md
         echo "::endgroup::"
