@@ -1,8 +1,15 @@
-## 1.1.0
+## 1.1.1
 
-## Enhancements Made
+### Enhancements Made
 
-- Support user-provided changelog body in release action and workflow
-  - PR: #14
-- Document changelog_body options for multiline release notes
-  - PR: #15
+- Enhancement: display inputs and run context in GitHub step summary
+  - PR: #16
+
+### Maintenance and upkeep improvements
+
+- Enhancement: clean up GitHub step summary output
+  - PR: #17
+- Enhancement: improve changelog header levels and release summary output
+  - PR: #18
+- Fix step summary header levels
+  - PR: #19
