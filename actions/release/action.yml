@@ -194,8 +194,10 @@ runs:
           echo "- **Ref:** $REF"
           echo "- **Changelog:** $CHANGELOG_SOURCE"
           echo ""
-          echo "## ${VERSION}"
-          printf '%s\n' "${CHANGELOG_BODY}"
+          echo "## Changelog"
+          echo ""
+          echo "### ${VERSION}"
+          printf '%s\n' "${CHANGELOG_BODY}" | sed 's/^#/##/'
         } >> $GITHUB_STEP_SUMMARY
         pipx run mdformat CHANGELOG.md
         echo "::endgroup::"
@@ -259,6 +261,7 @@ runs:
       shell: bash
       run: |
         echo "::group::Commands"
+        echo "RELEASE_VERSION=${VERSION}" >> "$GITHUB_ENV"
         DEV_VERSION=$(python3 "$GITHUB_ACTION_PATH/bump_dev.py" "$VERSION")
         poetry version "$DEV_VERSION"
         echo "VERSION=$(poetry version --short)" >> "$GITHUB_ENV"
@@ -280,8 +283,9 @@ runs:
           fi
         fi
         if [ "$DRY_RUN" = "true" ]; then
-          printf "\n\n## Post Version (not pushed): %s\n" "${VERSION}" >> $GITHUB_STEP_SUMMARY
+          printf "\n\n## Post Version (not pushed)\n\n%s\n" "${VERSION}" >> $GITHUB_STEP_SUMMARY
         else
-          printf "\n\n## Post Version: %s\n" "${VERSION}" >> $GITHUB_STEP_SUMMARY
+          printf "\n\n## Post Version\n\n%s\n" "${VERSION}" >> $GITHUB_STEP_SUMMARY
+          printf "\n\n## GitHub Release\n\nhttps://github.com/%s/releases/tag/v%s\n" "${REPOSITORY}" "${RELEASE_VERSION}" >> $GITHUB_STEP_SUMMARY
         fi
         echo "::endgroup::"
