@@ -171,8 +171,10 @@ runs:
           # Convert literal \n escape sequences to real newlines so users can
           # paste markdown into the single-line workflow_dispatch input field.
           BODY=$(printf '%s' "$USER_CHANGELOG_BODY" | sed 's/\\n/\n/g')
+          echo "CHANGELOG_SOURCE=user-provided" >> "$GITHUB_ENV"
         else
           BODY="$GENERATED_CHANGELOG_BODY"
+          echo "CHANGELOG_SOURCE=auto-generated" >> "$GITHUB_ENV"
         fi
         {
           echo 'CHANGELOG_BODY<<CHANGELOG_EOF'
@@ -185,8 +187,16 @@ runs:
       run: |
         echo "::group::Commands"
         python3 "$GITHUB_ACTION_PATH/update_changelog.py"
-        echo "## ${VERSION}" >> $GITHUB_STEP_SUMMARY
-        echo "${CHANGELOG_BODY}" >> $GITHUB_STEP_SUMMARY
+        {
+          echo "## Inputs"
+          echo "- **Version:** $VERSION"
+          echo "- **Dry run:** $DRY_RUN"
+          echo "- **Ref:** $REF"
+          echo "- **Changelog:** $CHANGELOG_SOURCE"
+          echo ""
+          echo "## ${VERSION}"
+          printf '%s\n' "${CHANGELOG_BODY}"
+        } >> $GITHUB_STEP_SUMMARY
         pipx run mdformat CHANGELOG.md
         echo "::endgroup::"
 
@@ -269,5 +279,9 @@ runs:
             git push origin "HEAD:$REF"
           fi
         fi
-        printf "\n\n## Post version: %s\n" "${VERSION}" >> $GITHUB_STEP_SUMMARY
+        if [ "$DRY_RUN" = "true" ]; then
+          printf "\n\n## Post Version (not pushed): %s\n" "${VERSION}" >> $GITHUB_STEP_SUMMARY
+        else
+          printf "\n\n## Post Version: %s\n" "${VERSION}" >> $GITHUB_STEP_SUMMARY
+        fi
         echo "::endgroup::"
