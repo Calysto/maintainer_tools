@@ -33,7 +33,9 @@ runs:
     - name: Setup
       shell: bash
       working-directory: ${{ runner.temp }}/sdist_unpack
-      run: ${{ inputs.setup }}
+      env:
+        COMMAND: ${{ inputs.setup }}
+      run: eval "$COMMAND"
 
     - name: Run tests
       shell: bash
