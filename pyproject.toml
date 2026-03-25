@@ -16,9 +16,9 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 
-[tool.poetry.group.dev.dependencies]
-pytest = ">=8.0"
-pre-commit = ">=3.0"
+[dependency-groups]
+test = ["pytest>=8.0"]
+dev = ["pre-commit>=3.0", { include-group = "test" }]
 
 [build-system]
 requires = ["poetry-core"]

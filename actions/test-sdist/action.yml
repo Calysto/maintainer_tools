@@ -2,9 +2,13 @@ name: Test SDist
 description: Downloads the sdist artifact, unpacks it, and runs the test suite
 
 inputs:
-  command:
+  setup:
     required: false
-    default: "just test"
+    default: "pip install --group test ."
+    description: "Command to install the unpacked sdist and its test dependencies"
+  test:
+    required: false
+    default: "pytest -v ."
     description: "Command to run the test suite from within the unpacked sdist directory"
 
 runs:
@@ -26,10 +30,20 @@ runs:
       working-directory: ${{ runner.temp }}/sdist_unpack
       run: python3 ${{ github.action_path }}/check_test_files.py
 
+    - name: Setup
+      shell: bash
+      working-directory: ${{ runner.temp }}/sdist_unpack
+      env:
+        COMMAND: ${{ inputs.setup }}
+      run: eval "$COMMAND"
+
     - name: Run tests
       shell: bash
       working-directory: ${{ runner.temp }}/sdist_unpack
       env:
-        COMMAND: ${{ inputs.command }}
+        COMMAND: ${{ inputs.test }}
       run: |
-        $COMMAND
+        if [[ "$COMMAND" == *pytest* ]] && [ -f "$GITHUB_WORKSPACE/pyproject.toml" ]; then
+          COMMAND="$COMMAND -c $GITHUB_WORKSPACE/pyproject.toml"
+        fi
+        eval "$COMMAND"
