@@ -99,6 +99,8 @@ jobs:
         run: bash actions/release/test_detect_prerelease.sh
       - name: Test update_changelog.py
         run: bash actions/release/test_update_changelog.sh
+      - name: Test check_test_files.py
+        run: bash actions/test-sdist/test_check_test_files.sh
 
   static:
     if: github.event_name != 'schedule' || github.repository == 'Calysto/maintainer_tools'
