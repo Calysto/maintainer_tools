@@ -4,7 +4,7 @@ description: Downloads the sdist artifact, unpacks it, and runs the test suite
 inputs:
   setup:
     required: false
-    default: "pip install -e '.[test]'"
+    default: "pip install --group test ."
     description: "Command to install the unpacked sdist and its test dependencies"
   test:
     required: false
