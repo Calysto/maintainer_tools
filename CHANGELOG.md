@@ -1,11 +1,11 @@
-## 1.2.0
+## 1.2.1
 
 ### Enhancements Made
 
-- Enhancement: add test file validation to test-sdist action
-  - PR: #21
+- Enhancement: replace command input with setup/test inputs using pip/pytest defaults
+  - PR: #23
 
-### Maintenance and upkeep improvements
+### Bugs Fixed
 
-- Fix publish job dry_run handling for schedule trigger
-  - PR: #20
+- Fix: unpack sdist outside the checkout directory
+  - PR: #22
