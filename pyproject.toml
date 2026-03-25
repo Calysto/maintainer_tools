@@ -1,4 +1,5 @@
 [tool.poetry]
+include = [{ path = "tests", format = "sdist" }]
 
 [project]
 name = "calysto-maintainer-tools"
