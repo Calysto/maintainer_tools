@@ -33,9 +33,7 @@ runs:
     - name: Setup
       shell: bash
       working-directory: ${{ runner.temp }}/sdist_unpack
-      env:
-        COMMAND: ${{ inputs.setup }}
-      run: $COMMAND
+      run: ${{ inputs.setup }}
 
     - name: Run tests
       shell: bash
@@ -46,4 +44,4 @@ runs:
         if [[ "$COMMAND" == *pytest* ]] && [ -f "$GITHUB_WORKSPACE/pyproject.toml" ]; then
           COMMAND="$COMMAND -c $GITHUB_WORKSPACE/pyproject.toml"
         fi
-        $COMMAND
+        eval "$COMMAND"
