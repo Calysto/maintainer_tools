@@ -92,4 +92,5 @@ runs:
           --title "chore: pre-commit autoupdate" \
           --body "" \
           --label "$LABELS" \
+          --head "$BRANCH" \
           $DRY_RUN_FLAG
