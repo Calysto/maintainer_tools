@@ -80,7 +80,9 @@ runs:
         git add .pre-commit-config.yaml
         git add prek.toml 2>/dev/null || true
         git commit -m "chore: pre-commit autoupdate"
-        git push --force origin "$BRANCH"
+        if [ "$DRY_RUN" != "true" ]; then
+          git push --force origin "$BRANCH"
+        fi
         DRY_RUN_FLAG=""
         if [ "$DRY_RUN" = "true" ]; then
           DRY_RUN_FLAG="--dry-run"
