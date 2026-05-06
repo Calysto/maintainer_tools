@@ -67,6 +67,59 @@ jobs:
 
 ______________________________________________________________________
 
+### `pre-commit-autoupdate`
+
+Installs [prek](https://prek.j178.dev), runs `prek auto-update` with a configurable cooldown, and opens a pull request with the changes. Optionally generates a GitHub App token for authenticated pushes.
+
+**Inputs**
+
+| Name | Required | Default | Description |
+|------|----------|---------|-------------|
+| `app-id` | No | `""` | GitHub App ID for authenticated pushes. Falls back to `github.token` if not provided. |
+| `app-private-key` | No | `""` | GitHub App private key for authenticated pushes. |
+| `cooldown-days` | No | `"7"` | Minimum release age in days before updating to a new version. |
+| `branch` | No | `"pre-commit-autoupdate"` | Branch name for the autoupdate pull request. |
+| `labels` | No | `"maintenance"` | Labels to apply to the pull request. |
+| `dry-run` | No | `"false"` | If `"true"`, passes `--dry-run` to `gh pr create` (no PR is actually opened). |
+
+**Usage**
+
+```yaml
+- uses: actions/checkout@v6
+  with:
+    persist-credentials: false
+- uses: calysto/maintainer_tools/actions/pre-commit-autoupdate@v1
+  with:
+    app-id: ${{ vars.APP_ID }}
+    app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
+```
+
+Typically used in a scheduled workflow:
+
+```yaml
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9am
+
+permissions:
+  pull-requests: write
+
+jobs:
+  autoupdate:
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: calysto/maintainer_tools/actions/pre-commit-autoupdate@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
+```
+
+______________________________________________________________________
+
 ### `enforce-label`
 
 Enforces that every PR has at least one of the required labels: `bug`, `enhancement`, `dependencies`, `maintenance`, `documentation`.
@@ -95,6 +148,48 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: calysto/maintainer_tools/actions/enforce-label@v1
+```
+
+______________________________________________________________________
+
+### `pre-commit-run`
+
+Installs [prek](https://prek.j178.dev) and runs pre-commit hooks with environment caching.
+
+**Inputs**
+
+| Name | Required | Default | Description |
+|------|----------|---------|-------------|
+| `extra-args` | No | `"--all-files"` | Extra arguments passed to `prek run`. |
+
+**Usage**
+
+```yaml
+- uses: actions/checkout@v6
+  with:
+    persist-credentials: false
+- uses: calysto/maintainer_tools/actions/pre-commit-run@v1
+```
+
+Typically used in a workflow triggered on `push` and `pull_request` events:
+
+```yaml
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: calysto/maintainer_tools/actions/pre-commit-run@v1
+```
+
+Pass `extra-args` to run only on changed files (e.g. in a PR context):
+
+```yaml
+- uses: calysto/maintainer_tools/actions/pre-commit-run@v1
+  with:
+    extra-args: "--from-ref ${{ github.event.pull_request.base.sha }} --to-ref HEAD"
 ```
 
 ______________________________________________________________________

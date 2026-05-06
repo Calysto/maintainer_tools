@@ -1,0 +1,93 @@
+name: Pre-commit Autoupdate
+description: Run prek auto-update with a cooldown and open a pull request with the changes
+
+inputs:
+  app-id:
+    required: false
+    default: ""
+    description: "GitHub App ID for authenticated pushes (optional; falls back to github.token)"
+  app-private-key:
+    required: false
+    default: ""
+    description: "GitHub App private key for authenticated pushes"
+  cooldown-days:
+    required: false
+    default: "7"
+    description: "Minimum release age in days before updating to a new version"
+  branch:
+    required: false
+    default: "pre-commit-autoupdate"
+    description: "Branch name for the autoupdate pull request"
+  labels:
+    required: false
+    default: "maintenance"
+    description: "Labels to apply to the pull request"
+  dry-run:
+    required: false
+    default: "false"
+    description: "If 'true', pass --dry-run to gh pr create (skips actual PR creation)"
+
+runs:
+  using: composite
+  steps:
+    - name: Generate app token
+      id: app-token
+      if: inputs.app-id != '' && inputs.app-private-key != ''
+      uses: actions/create-github-app-token@v3
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.app-private-key }}
+
+    - name: Install prek
+      shell: bash
+      run: pipx install prek
+
+    - name: Get prek cache dir
+      id: prek-cache-dir
+      shell: bash
+      run: echo "dir=$(prek cache dir)" >> $GITHUB_OUTPUT
+
+    - name: Cache prek environments
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.prek-cache-dir.outputs.dir }}
+        key: prek-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml', 'prek.toml') }}
+        restore-keys: |
+          prek-${{ runner.os }}-
+
+    - name: Run prek auto-update
+      shell: bash
+      env:
+        COOLDOWN_DAYS: ${{ inputs.cooldown-days }}
+      run: prek auto-update --cooldown-days "$COOLDOWN_DAYS"
+
+    - name: Create pull request
+      shell: bash
+      env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        BRANCH: ${{ inputs.branch }}
+        LABELS: ${{ inputs.labels }}
+        DRY_RUN: ${{ inputs.dry-run }}
+      run: |
+        if git diff --quiet; then
+          echo "No changes detected, skipping PR creation"
+          exit 0
+        fi
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        git checkout -B "$BRANCH"
+        git add .pre-commit-config.yaml
+        git add prek.toml 2>/dev/null || true
+        git commit -m "chore: pre-commit autoupdate"
+        git push --force origin "$BRANCH"
+        DRY_RUN_FLAG=""
+        if [ "$DRY_RUN" = "true" ]; then
+          DRY_RUN_FLAG="--dry-run"
+        fi
+        # shellcheck disable=SC2086
+        gh pr create \
+          --title "chore: pre-commit autoupdate" \
+          --body "" \
+          --label "$LABELS" \
+          $DRY_RUN_FLAG

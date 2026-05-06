@@ -1,0 +1,34 @@
+name: Pre-commit Run
+description: Run pre-commit hooks using prek with caching
+
+inputs:
+  extra-args:
+    required: false
+    default: "--all-files"
+    description: "Extra arguments to pass to 'prek run' (default: --all-files)"
+
+runs:
+  using: composite
+  steps:
+    - name: Install prek
+      shell: bash
+      run: pipx install prek
+
+    - name: Get prek cache dir
+      id: prek-cache-dir
+      shell: bash
+      run: echo "dir=$(prek cache dir)" >> $GITHUB_OUTPUT
+
+    - name: Cache prek environments
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.prek-cache-dir.outputs.dir }}
+        key: prek-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml', 'prek.toml') }}
+        restore-keys: |
+          prek-${{ runner.os }}-
+
+    - name: Run pre-commit hooks
+      shell: bash
+      env:
+        EXTRA_ARGS: ${{ inputs.extra-args }}
+      run: prek run $EXTRA_ARGS
