@@ -4,8 +4,8 @@ description: Run pre-commit hooks using prek with caching
 inputs:
   extra-args:
     required: false
-    default: "--all-files"
-    description: "Extra arguments to pass to 'prek run' (default: --all-files)"
+    default: "--all-files --hook-stage manual"
+    description: "Extra arguments to pass to 'prek run' (default: --all-files --hook-stage manual)"
 
 runs:
   using: composite

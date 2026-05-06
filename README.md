@@ -160,7 +160,7 @@ Installs [prek](https://prek.j178.dev) and runs pre-commit hooks with environmen
 
 | Name | Required | Default | Description |
 |------|----------|---------|-------------|
-| `extra-args` | No | `"--all-files"` | Extra arguments passed to `prek run`. |
+| `extra-args` | No | `"--all-files --hook-stage manual"` | Extra arguments passed to `prek run`. |
 
 **Usage**
 
