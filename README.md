@@ -372,6 +372,70 @@ jobs:
 
 ______________________________________________________________________
 
+### `codeql`
+
+Initializes CodeQL and performs security analysis for a given language. Wraps `github/codeql-action/init` and `github/codeql-action/analyze`.
+
+**Inputs**
+
+| Name | Required | Default | Description |
+|------|----------|---------|-------------|
+| `language` | Yes | — | Language to analyze (e.g. `python`, `actions`, `javascript-typescript`). |
+| `build-mode` | No | `"none"` | Build mode: `none`, `autobuild`, or `manual`. |
+
+**Usage**
+
+```yaml
+- uses: actions/checkout@v6
+  with:
+    persist-credentials: false
+- uses: calysto/maintainer_tools/actions/codeql@v1
+  with:
+    language: python
+    build-mode: none
+```
+
+Typically used in a scheduled CodeQL workflow with a language matrix:
+
+```yaml
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: '44 18 * * 3'
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    if: github.event_name != 'schedule' || github.repository == 'your-org/your-repo'
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            build-mode: none
+          - language: python
+            build-mode: none
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: calysto/maintainer_tools/actions/codeql@v1
+        with:
+          language: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+```
+
+______________________________________________________________________
+
 ### `zizmor`
 
 Runs [zizmor](https://woodruffw.github.io/zizmor/) GitHub Actions security analysis. If the calling repository does not have a `.github/zizmor.yml` config file, a bundled default config is used that pins `actions/*` and `calysto/maintainer_tools/*` references to a version tag.

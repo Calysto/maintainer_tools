@@ -1,0 +1,25 @@
+name: CodeQL Analysis
+description: Initialize CodeQL and perform security analysis for a given language
+
+inputs:
+  language:
+    required: true
+    description: "Language to analyze (e.g. python, actions, javascript-typescript)"
+  build-mode:
+    required: false
+    default: "none"
+    description: "Build mode: none, autobuild, or manual"
+
+runs:
+  using: composite
+  steps:
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4
+      with:
+        languages: ${{ inputs.language }}
+        build-mode: ${{ inputs.build-mode }}
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4
+      with:
+        category: "/language:${{ inputs.language }}"
