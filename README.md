@@ -372,6 +372,42 @@ jobs:
 
 ______________________________________________________________________
 
+### `zizmor`
+
+Runs [zizmor](https://woodruffw.github.io/zizmor/) GitHub Actions security analysis. If the calling repository does not have a `.github/zizmor.yml` config file, a bundled default config is used that pins `actions/*` and `calysto/maintainer_tools/*` references to a version tag.
+
+**Inputs**
+
+None.
+
+**Usage**
+
+```yaml
+- uses: actions/checkout@v6
+  with:
+    persist-credentials: false
+- uses: calysto/maintainer_tools/actions/zizmor@v1
+```
+
+Typically used in a workflow triggered on `push` and `pull_request` events:
+
+```yaml
+jobs:
+  zizmor:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: calysto/maintainer_tools/actions/zizmor@v1
+```
+
+To customize the rules, add a `.github/zizmor.yml` to your repository — it will be used instead of the bundled default.
+
+______________________________________________________________________
+
 ## Tag Management
 
 The `v1` floating tag is updated automatically as part of the release workflow. After a stable release (any version without pre-release markers like `a`, `b`, `rc`, or `dev`), the `update-v1-tag` job will:

@@ -1,0 +1,21 @@
+name: Zizmor
+description: Run zizmor GitHub Actions security analysis, using a bundled config as fallback if .github/zizmor.yml is absent
+
+runs:
+  using: composite
+  steps:
+    - name: Copy bundled zizmor config if none present
+      shell: bash
+      run: |
+        if [ ! -f "$GITHUB_WORKSPACE/.github/zizmor.yml" ]; then
+          cp "${{ github.action_path }}/zizmor.yml" "$GITHUB_WORKSPACE/.github/zizmor.yml"
+          echo "ZIZMOR_CONFIG_COPIED=true" >> "$GITHUB_ENV"
+        fi
+
+    - name: Run zizmor
+      uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e # v0.5.3
+
+    - name: Remove bundled zizmor config
+      if: env.ZIZMOR_CONFIG_COPIED == 'true'
+      shell: bash
+      run: rm "$GITHUB_WORKSPACE/.github/zizmor.yml"
