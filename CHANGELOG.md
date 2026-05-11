@@ -1,6 +1,6 @@
-## 1.4.0
+## 1.4.1
 
-### Enhancements Made
+### Bugs Fixed
 
-- feat: improve pre-commit-autoupdate action
-  - PR: #33
+- fix: allow Python prereleases in base-setup
+  - PR: #34
