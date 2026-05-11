@@ -73,15 +73,40 @@ runs:
           echo "No changes detected, skipping PR creation"
           exit 0
         fi
+
+        # Generate random suffix for branch name
+        SUFFIX=$(openssl rand -hex 4)
+        FULL_BRANCH="${BRANCH}-${SUFFIX}"
+
+        # Parse updated packages from diff
+        UPDATES=""
+        CURRENT_REPO=""
+        OLD_REV=""
+        while IFS= read -r line; do
+          if [[ "$line" == " "* ]] && [[ "$line" =~ repo:[[:space:]]+(.*) ]]; then
+            CURRENT_REPO=$(basename "${BASH_REMATCH[1]}")
+          elif [[ "$line" =~ ^-[[:space:]]+rev:[[:space:]]+(.*) ]]; then
+            OLD_REV="${BASH_REMATCH[1]}"
+          elif [[ "$line" =~ ^\+[[:space:]]+rev:[[:space:]]+(.*) ]]; then
+            NEW_REV="${BASH_REMATCH[1]}"
+            UPDATES="${UPDATES}- ${CURRENT_REPO}: \`${OLD_REV}\` → \`${NEW_REV}\`"$'\n'
+          fi
+        done < <(git diff .pre-commit-config.yaml)
+
+        BODY=""
+        if [ -n "$UPDATES" ]; then
+          BODY="## Updated packages"$'\n\n'"${UPDATES}"
+        fi
+
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-        git checkout -B "$BRANCH"
+        git checkout -B "$FULL_BRANCH"
         git add .pre-commit-config.yaml
         git add prek.toml 2>/dev/null || true
         git commit -m "chore: pre-commit autoupdate"
         if [ "$DRY_RUN" != "true" ]; then
-          git push --force origin "$BRANCH"
+          git push origin "$FULL_BRANCH"
         fi
         DRY_RUN_FLAG=""
         if [ "$DRY_RUN" = "true" ]; then
@@ -90,7 +115,7 @@ runs:
         # shellcheck disable=SC2086
         gh pr create \
           --title "chore: pre-commit autoupdate" \
-          --body "" \
+          --body "$BODY" \
           --label "$LABELS" \
-          --head "$BRANCH" \
+          --head "$FULL_BRANCH" \
           $DRY_RUN_FLAG
