@@ -4,3 +4,4 @@ rules:
       policies:
         actions/*: ref-pin
         calysto/maintainer_tools/*: ref-pin
+        Calysto/maintainer_tools/*: ref-pin
