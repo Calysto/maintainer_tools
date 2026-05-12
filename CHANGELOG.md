@@ -1,6 +1,6 @@
-## 1.4.1
+## 1.5.0
 
-### Bugs Fixed
+### Enhancements Made
 
-- fix: allow Python prereleases in base-setup
-  - PR: #34
+- feat: add build action wrapping hynek/build-and-inspect-python-package v2.18.0
+  - PR: #36
