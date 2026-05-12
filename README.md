@@ -12,6 +12,40 @@ ______________________________________________________________________
 
 ## Actions
 
+### `build`
+
+Builds and inspects the Python package using [`hynek/build-and-inspect-python-package`](https://github.com/hynek/build-and-inspect-python-package) and exports supported Python versions derived from the package classifiers. Includes free-threaded builds by default.
+
+**Inputs**
+
+| Name | Required | Default | Description |
+|------|----------|---------|-------------|
+| `include-free-threaded` | No | `"true"` | Whether to include free-threaded Python builds. |
+
+**Outputs**
+
+| Name | Description |
+|------|-------------|
+| `python-versions` | JSON array of supported Python versions derived from classifiers (e.g. `["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]`). |
+
+**Usage**
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      python-versions: ${{ steps.build.outputs.python-versions }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: calysto/maintainer_tools/actions/build@v1
+        id: build
+```
+
+______________________________________________________________________
+
 ### `base-setup`
 
 Installs Python, Poetry (with OS-keyed cache), `just`, and project dependencies. This action should be the first step in any job that needs to build or test the package.
@@ -31,7 +65,7 @@ Installs Python, Poetry (with OS-keyed cache), `just`, and project dependencies.
     python-version: "3.12"
 ```
 
-A full test matrix workflow using `hynek/build-and-inspect-python-package` to derive the supported Python versions:
+A full test matrix workflow using the `build` action to derive the supported Python versions:
 
 ```yaml
 jobs:
@@ -39,13 +73,13 @@ jobs:
     name: Build & inspect package
     runs-on: ubuntu-latest
     outputs:
-      supported_python_classifiers_json_array: ${{ steps.baipp.outputs.supported_python_classifiers_json_array }}
+      python-versions: ${{ steps.build.outputs.python-versions }}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: hynek/build-and-inspect-python-package@v2
-        id: baipp
+      - uses: calysto/maintainer_tools/actions/build@v1
+        id: build
 
   test:
     name: Test (Python ${{ matrix.python-version }})
@@ -54,7 +88,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ${{ fromJSON(needs.build.outputs.supported_python_classifiers_json_array) }}
+        python-version: ${{ fromJSON(needs.build.outputs.python-versions) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -264,7 +298,7 @@ jobs:
           ref: ${{ needs.release.outputs.tag }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: hynek/build-and-inspect-python-package@v2
+      - uses: calysto/maintainer_tools/actions/build@v1
 
   publish:
     needs: [build]
@@ -357,7 +391,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: hynek/build-and-inspect-python-package@v2
+        with:
+          persist-credentials: false
+      - uses: calysto/maintainer_tools/actions/build@v1
 
   test-sdist:
     needs: build
