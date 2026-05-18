@@ -1,6 +1,20 @@
-## 1.5.0
+## 1.5.1
 
-### Enhancements Made
+### Bugs Fixed
 
-- feat: add build action wrapping hynek/build-and-inspect-python-package v2.18.0
-  - PR: #36
+- fix: allow Calysto/maintainer_tools in zizmor config
+  - PR: #35
+
+### Maintenance and upkeep improvements
+
+- chore: pre-commit autoupdate
+  - PR: #38
+- feat: extract and test pre-commit-autoupdate diff parsing
+  - PR: #39
+- chore: add pull request template
+  - PR: #40
+
+### Dependency updates
+
+- Bump actions/create-github-app-token from 3 to 3.1.1 in the actions group
+  - PR: #37
