@@ -101,6 +101,8 @@ jobs:
         run: bash actions/release/test_update_changelog.sh
       - name: Test check_test_files.py
         run: bash actions/test-sdist/test_check_test_files.sh
+      - name: Test parse_diff.sh
+        run: bash actions/pre-commit-autoupdate/test_parse_diff.sh
 
   test_pre_commit_autoupdate:
     if: github.event_name != 'schedule' || github.repository == 'Calysto/maintainer_tools'

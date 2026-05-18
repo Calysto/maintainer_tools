@@ -79,19 +79,7 @@ runs:
         FULL_BRANCH="${BRANCH}-${SUFFIX}"
 
         # Parse updated packages from diff
-        UPDATES=""
-        CURRENT_REPO=""
-        OLD_REV=""
-        while IFS= read -r line; do
-          if [[ "$line" == " "* ]] && [[ "$line" =~ repo:[[:space:]]+(.*) ]]; then
-            CURRENT_REPO=$(basename "${BASH_REMATCH[1]}")
-          elif [[ "$line" =~ ^-[[:space:]]+rev:[[:space:]]+(.*) ]]; then
-            OLD_REV="${BASH_REMATCH[1]}"
-          elif [[ "$line" =~ ^\+[[:space:]]+rev:[[:space:]]+(.*) ]]; then
-            NEW_REV="${BASH_REMATCH[1]}"
-            UPDATES="${UPDATES}- ${CURRENT_REPO}: \`${OLD_REV}\` → \`${NEW_REV}\`"$'\n'
-          fi
-        done < <(git diff .pre-commit-config.yaml)
+        UPDATES=$(git diff .pre-commit-config.yaml | bash "${{ github.action_path }}/parse_diff.sh" -)
 
         BODY=""
         if [ -n "$UPDATES" ]; then
