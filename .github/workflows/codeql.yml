@@ -62,7 +62,7 @@ jobs:
       with:
         persist-credentials: false
 
-    - uses: ./actions/codeql
+    - uses: $/actions/codeql
       with:
         language: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}

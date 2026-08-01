@@ -18,4 +18,4 @@ jobs:
         with:
           persist-credentials: false
       - name: Run zizmor
-        uses: ./actions/zizmor
+        uses: $/actions/zizmor
