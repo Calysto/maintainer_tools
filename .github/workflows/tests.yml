@@ -103,6 +103,8 @@ jobs:
         run: bash actions/test-sdist/test_check_test_files.sh
       - name: Test parse_diff.sh
         run: bash actions/pre-commit-autoupdate/test_parse_diff.sh
+      - name: Test diff_lock.py
+        run: bash actions/poetry-lock-update/test_diff_lock.sh
 
   test_pre_commit_autoupdate:
     if: github.event_name != 'schedule' || github.repository == 'Calysto/maintainer_tools'
@@ -113,6 +115,19 @@ jobs:
         with:
           persist-credentials: false
       - uses: $/actions/pre-commit-autoupdate
+        with:
+          dry-run: "true"
+
+  test_poetry_lock_update:
+    if: github.event_name != 'schedule' || github.repository == 'Calysto/maintainer_tools'
+    name: Test Poetry Lock Update
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/actions/base-setup
+      - uses: $/actions/poetry-lock-update
         with:
           dry-run: "true"
 
@@ -155,6 +170,7 @@ jobs:
       - test_release
       - test_scripts
       - test_pre_commit_autoupdate
+      - test_poetry_lock_update
       - test_pre_commit_run
       - static
     runs-on: ubuntu-latest

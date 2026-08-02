@@ -154,6 +154,61 @@ jobs:
 
 ______________________________________________________________________
 
+### `poetry-lock-update`
+
+Runs `poetry update` under a minimum-release-age cooldown and opens a pull request with the `poetry.lock` changes. Requires `base-setup` to run before this action. Optionally generates a GitHub App token for authenticated pushes.
+
+**Inputs**
+
+| Name | Required | Default | Description |
+|------|----------|---------|-------------|
+| `app-id` | No | `""` | GitHub App ID for authenticated pushes. Falls back to `github.token` if not provided. |
+| `app-private-key` | No | `""` | GitHub App private key for authenticated pushes. |
+| `min-release-age-days` | No | `"7"` | Minimum release age in days before Poetry's resolver will consider a version. |
+| `branch` | No | `"poetry-lock-update"` | Branch name for the update pull request. |
+| `labels` | No | `"maintenance"` | Labels to apply to the pull request. |
+| `dry-run` | No | `"false"` | If `"true"`, passes `--dry-run` to `gh pr create` (no PR is actually opened). |
+
+**Usage**
+
+```yaml
+- uses: actions/checkout@v6
+  with:
+    persist-credentials: false
+- uses: calysto/maintainer_tools/actions/base-setup@v1
+- uses: calysto/maintainer_tools/actions/poetry-lock-update@v1
+  with:
+    app-id: ${{ vars.APP_ID }}
+    app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
+```
+
+Typically used in a scheduled workflow:
+
+```yaml
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 6am
+
+permissions:
+  pull-requests: write
+
+jobs:
+  lock-update:
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: calysto/maintainer_tools/actions/base-setup@v1
+      - uses: calysto/maintainer_tools/actions/poetry-lock-update@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
+```
+
+______________________________________________________________________
+
 ### `enforce-label`
 
 Enforces that every PR has at least one of the required labels: `bug`, `enhancement`, `dependencies`, `maintenance`, `documentation`.

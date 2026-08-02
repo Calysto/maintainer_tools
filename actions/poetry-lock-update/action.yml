@@ -1,5 +1,5 @@
-name: Pre-commit Autoupdate
-description: Run prek auto-update with a cooldown and open a pull request with the changes
+name: Poetry Lock Update
+description: Runs `poetry update` under a minimum-release-age cooldown and opens a pull request with the lock file changes
 
 inputs:
   app-id:
@@ -10,14 +10,14 @@ inputs:
     required: false
     default: ""
     description: "GitHub App private key for authenticated pushes"
-  cooldown-days:
+  min-release-age-days:
     required: false
     default: "7"
-    description: "Minimum release age in days before updating to a new version"
+    description: "Minimum release age in days before Poetry's resolver will consider a version (sets POETRY_SOLVER_MIN_RELEASE_AGE)"
   branch:
     required: false
-    default: "pre-commit-autoupdate"
-    description: "Branch name for the autoupdate pull request"
+    default: "poetry-lock-update"
+    description: "Branch name for the update pull request"
   labels:
     required: false
     default: "maintenance"
@@ -40,28 +40,15 @@ runs:
         permission-contents: write
         permission-pull-requests: write
 
-    - name: Install prek
+    - name: Save current lock file
       shell: bash
-      run: pipx install prek
+      run: cp poetry.lock "${{ runner.temp }}/poetry.lock.before"
 
-    - name: Get prek cache dir
-      id: prek-cache-dir
-      shell: bash
-      run: echo "dir=$(prek cache dir)" >> $GITHUB_OUTPUT
-
-    - name: Cache prek environments
-      uses: actions/cache@v4
-      with:
-        path: ${{ steps.prek-cache-dir.outputs.dir }}
-        key: prek-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml', 'prek.toml') }}
-        restore-keys: |
-          prek-${{ runner.os }}-
-
-    - name: Run prek auto-update
+    - name: Run poetry update
       shell: bash
       env:
-        COOLDOWN_DAYS: ${{ inputs.cooldown-days }}
-      run: prek auto-update --cooldown-days "$COOLDOWN_DAYS"
+        POETRY_SOLVER_MIN_RELEASE_AGE: ${{ inputs.min-release-age-days }}
+      run: poetry update --no-interaction --lock
 
     - name: Create pull request
       shell: bash
@@ -70,8 +57,9 @@ runs:
         BRANCH: ${{ inputs.branch }}
         LABELS: ${{ inputs.labels }}
         DRY_RUN: ${{ inputs.dry-run }}
+        OLD_LOCK: ${{ runner.temp }}/poetry.lock.before
       run: |
-        if git diff --quiet; then
+        if git diff --quiet poetry.lock; then
           echo "No changes detected, skipping PR creation"
           exit 0
         fi
@@ -80,8 +68,11 @@ runs:
         SUFFIX=$(openssl rand -hex 4)
         FULL_BRANCH="${BRANCH}-${SUFFIX}"
 
-        # Parse updated packages from diff
-        UPDATES=$(git diff .pre-commit-config.yaml | bash "${{ github.action_path }}/parse_diff.sh" -)
+        # diff_lock.py needs tomllib (Python 3.11+) or its tomli fallback;
+        # install tomli on older interpreters where neither is present.
+        python3 -c "import tomllib" 2>/dev/null || pip install --quiet tomli
+
+        UPDATES=$(python3 "${{ github.action_path }}/diff_lock.py" "$OLD_LOCK" poetry.lock)
 
         BODY=""
         if [ -n "$UPDATES" ]; then
@@ -92,9 +83,8 @@ runs:
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
         git checkout -B "$FULL_BRANCH"
-        git add .pre-commit-config.yaml
-        git add prek.toml 2>/dev/null || true
-        git commit -m "chore: pre-commit autoupdate"
+        git add poetry.lock
+        git commit -m "chore: update poetry.lock"
         if [ "$DRY_RUN" != "true" ]; then
           git push origin "$FULL_BRANCH"
         fi
@@ -104,7 +94,7 @@ runs:
         fi
         # shellcheck disable=SC2086
         gh pr create \
-          --title "chore: pre-commit autoupdate" \
+          --title "chore: update poetry.lock" \
           --body "$BODY" \
           --label "$LABELS" \
           --head "$FULL_BRANCH" \
