@@ -1,20 +1,26 @@
-## 1.5.1
+## 1.6.0
 
-### Bugs Fixed
+### Enhancements Made
 
-- fix: allow Calysto/maintainer_tools in zizmor config
-  - PR: #35
+- feat: add poetry-lock-update action
+  - PR: #48
 
 ### Maintenance and upkeep improvements
 
-- chore: pre-commit autoupdate
-  - PR: #38
-- feat: extract and test pre-commit-autoupdate diff parsing
-  - PR: #39
-- chore: add pull request template
-  - PR: #40
+- Drop unused Test PyPI publish and add static package validation
+  - PR: #46
+- Use self-repository $/ syntax for local action references
+  - PR: #47
 
 ### Dependency updates
 
-- Bump actions/create-github-app-token from 3 to 3.1.1 in the actions group
-  - PR: #37
+- Bump actions/create-github-app-token from 3.1.1 to 3.2.0 in the actions group
+  - PR: #41
+- Bump actions/checkout from 6 to 6.0.2 in the actions group
+  - PR: #42
+- Bump actions/checkout from 6.0.2 to 6.0.3 in the actions group
+  - PR: #43
+- Bump actions/checkout from 6.0.3 to 7.0.0 in the actions group
+  - PR: #44
+- Bump the actions group with 2 updates
+  - PR: #45
