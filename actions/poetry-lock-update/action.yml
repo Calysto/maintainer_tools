@@ -1,0 +1,95 @@
+name: Poetry Lock Update
+description: Runs `poetry update` under a minimum-release-age cooldown and opens a pull request with the lock file changes
+
+inputs:
+  app-id:
+    required: false
+    default: ""
+    description: "GitHub App ID for authenticated pushes (optional; falls back to github.token)"
+  app-private-key:
+    required: false
+    default: ""
+    description: "GitHub App private key for authenticated pushes"
+  min-release-age-days:
+    required: false
+    default: "7"
+    description: "Minimum release age in days before Poetry's resolver will consider a version (sets POETRY_SOLVER_MIN_RELEASE_AGE)"
+  branch:
+    required: false
+    default: "poetry-lock-update"
+    description: "Branch name for the update pull request"
+  labels:
+    required: false
+    default: "maintenance"
+    description: "Labels to apply to the pull request"
+  dry-run:
+    required: false
+    default: "false"
+    description: "If 'true', pass --dry-run to gh pr create (skips actual PR creation)"
+
+runs:
+  using: composite
+  steps:
+    - name: Generate app token
+      id: app-token
+      if: inputs.app-id != '' && inputs.app-private-key != ''
+      uses: actions/create-github-app-token@v3
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.app-private-key }}
+
+    - name: Save current lock file
+      shell: bash
+      run: cp poetry.lock "${{ runner.temp }}/poetry.lock.before"
+
+    - name: Run poetry update
+      shell: bash
+      env:
+        POETRY_SOLVER_MIN_RELEASE_AGE: ${{ inputs.min-release-age-days }}
+      run: poetry update --no-interaction --lock
+
+    - name: Create pull request
+      shell: bash
+      env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        BRANCH: ${{ inputs.branch }}
+        LABELS: ${{ inputs.labels }}
+        DRY_RUN: ${{ inputs.dry-run }}
+        OLD_LOCK: ${{ runner.temp }}/poetry.lock.before
+      run: |
+        if git diff --quiet poetry.lock; then
+          echo "No changes detected, skipping PR creation"
+          exit 0
+        fi
+
+        # Generate random suffix for branch name
+        SUFFIX=$(openssl rand -hex 4)
+        FULL_BRANCH="${BRANCH}-${SUFFIX}"
+
+        UPDATES=$(python3 "${{ github.action_path }}/diff_lock.py" "$OLD_LOCK" poetry.lock)
+
+        BODY=""
+        if [ -n "$UPDATES" ]; then
+          BODY="## Updated packages"$'\n\n'"${UPDATES}"
+        fi
+
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        git checkout -B "$FULL_BRANCH"
+        git add poetry.lock
+        git commit -m "chore: update poetry.lock"
+        if [ "$DRY_RUN" != "true" ]; then
+          git push origin "$FULL_BRANCH"
+        fi
+        DRY_RUN_FLAG=""
+        if [ "$DRY_RUN" = "true" ]; then
+          DRY_RUN_FLAG="--dry-run"
+        fi
+        # shellcheck disable=SC2086
+        gh pr create \
+          --title "chore: update poetry.lock" \
+          --body "$BODY" \
+          --label "$LABELS" \
+          --head "$FULL_BRANCH" \
+          $DRY_RUN_FLAG
