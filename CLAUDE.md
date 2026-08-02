@@ -43,4 +43,4 @@ Each action lives in `actions/<name>/action.yml`. The actions are:
 
 ### PRs
 
-Always target the upstream repo: `--repo Calysto/maintainer_tools --head blink1073:<branch>`.
+Always target the upstream repo: `--repo Calysto/maintainer_tools --head <your-github-username>:<branch>`.
