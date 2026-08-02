@@ -37,6 +37,8 @@ runs:
       with:
         app-id: ${{ inputs.app-id }}
         private-key: ${{ inputs.app-private-key }}
+        permission-contents: write
+        permission-pull-requests: write
 
     - name: Install prek
       shell: bash
