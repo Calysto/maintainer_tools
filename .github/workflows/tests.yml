@@ -123,6 +123,9 @@ jobs:
   test_poetry_lock_update:
     if: github.event_name != 'schedule' || github.repository == 'Calysto/maintainer_tools'
     name: Test Poetry Lock Update
+    permissions:
+      contents: read
+      pull-requests: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1

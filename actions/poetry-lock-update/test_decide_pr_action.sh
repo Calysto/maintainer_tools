@@ -63,12 +63,14 @@ CALLS=$(cat "$TMPDIR/gh_calls.log")
 check_contains "no open PR: gh pr create is called" "pr create" "$CALLS"
 check_contains "no open PR: create uses --head poetry-lock-update" "--head poetry-lock-update" "$CALLS"
 check_not_contains "no open PR: gh pr edit is NOT called" "pr edit" "$CALLS"
+check_contains "pr list uses --state open" "--state open" "$CALLS"
 
 # Case 2: open PR #42 -> should edit, not create
 run_script '[{"number": 42}]' "poetry-lock-update" "chore: update poetry.lock" "BODY2" "maintenance" "false"
 CALLS=$(cat "$TMPDIR/gh_calls.log")
 check_contains "open PR: gh pr edit 42 is called" "pr edit 42" "$CALLS"
 check_not_contains "open PR: gh pr create is NOT called" "pr create" "$CALLS"
+check_contains "open PR: edit re-applies label" "--add-label maintenance" "$CALLS"
 
 # Case 3: open PR #42, dry-run -> should neither edit nor create, and say so
 run_script '[{"number": 42}]' "poetry-lock-update" "chore: update poetry.lock" "BODY3" "maintenance" "true"

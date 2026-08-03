@@ -165,9 +165,9 @@ Runs `poetry update` under a minimum-release-age cooldown and opens a pull reque
 | `app-id` | No | `""` | GitHub App ID for authenticated pushes. Falls back to `github.token` if not provided. |
 | `app-private-key` | No | `""` | GitHub App private key for authenticated pushes. |
 | `min-release-age-days` | No | `"7"` | Minimum release age in days before Poetry's resolver will consider a version. |
-| `branch` | No | `"poetry-lock-update"` | Branch name for the update pull request. Reused across runs — an existing open PR on this branch is updated in place rather than duplicated. |
+| `branch` | No | `"poetry-lock-update"` | Branch name for the update pull request. Reused across runs — an existing open PR on this branch is updated in place rather than duplicated. This branch is exclusively managed by this action and force-pushed on every run, so manual commits pushed to it will not survive. |
 | `labels` | No | `"maintenance"` | Labels to apply to the pull request. |
-| `dry-run` | No | `"false"` | If `"true"`, passes `--dry-run` to `gh pr create` (no PR is actually opened). |
+| `dry-run` | No | `"false"` | If `"true"`, no push or PR mutation happens: `gh pr create` runs with `--dry-run` when no PR is open, or a "would update" message prints when one is. |
 
 **Usage**
 

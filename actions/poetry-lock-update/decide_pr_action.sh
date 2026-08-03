@@ -17,7 +17,7 @@ if [ -n "$PR_NUMBER" ]; then
   if [ "$DRY_RUN" = "true" ]; then
     echo "Would update PR #$PR_NUMBER (no new PR created)"
   else
-    gh pr edit "$PR_NUMBER" --body "$BODY"
+    gh pr edit "$PR_NUMBER" --body "$BODY" --add-label "$LABELS"
     echo "Updated PR #$PR_NUMBER"
   fi
 else
