@@ -64,10 +64,6 @@ runs:
           exit 0
         fi
 
-        # Generate random suffix for branch name
-        SUFFIX=$(openssl rand -hex 4)
-        FULL_BRANCH="${BRANCH}-${SUFFIX}"
-
         # diff_lock.py needs tomllib (Python 3.11+) or its tomli fallback;
         # install tomli on older interpreters where neither is present.
         python3 -c "import tomllib" 2>/dev/null || pip install --quiet tomli
@@ -82,20 +78,17 @@ runs:
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-        git checkout -B "$FULL_BRANCH"
+        git checkout -B "$BRANCH"
         git add poetry.lock
         git commit -m "chore: update poetry.lock"
+
+        # Branch is exclusively bot-owned and rebuilt fresh from the base
+        # every run, so overwriting whatever is currently on the remote
+        # (a still-open PR's branch, a stale closed-PR branch, or nothing)
+        # is always safe and always correct.
         if [ "$DRY_RUN" != "true" ]; then
-          git push origin "$FULL_BRANCH"
+          git push --force origin "$BRANCH"
         fi
-        DRY_RUN_FLAG=""
-        if [ "$DRY_RUN" = "true" ]; then
-          DRY_RUN_FLAG="--dry-run"
-        fi
-        # shellcheck disable=SC2086
-        gh pr create \
-          --title "chore: update poetry.lock" \
-          --body "$BODY" \
-          --label "$LABELS" \
-          --head "$FULL_BRANCH" \
-          $DRY_RUN_FLAG
+
+        bash "${{ github.action_path }}/decide_pr_action.sh" \
+          "$BRANCH" "chore: update poetry.lock" "$BODY" "$LABELS" "$DRY_RUN"
