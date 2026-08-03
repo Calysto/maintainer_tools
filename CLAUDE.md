@@ -25,7 +25,7 @@ uses: calysto/maintainer_tools/actions/<name>@v1
 Each action lives in `actions/<name>/action.yml`. The actions are:
 
 - **`base-setup`** — Sets up Python (auto-detects minimum version from `pyproject.toml` if unspecified), Poetry, and `just` with OS-keyed cache. Must be called before `release`, `test-minimum-versions`, and `test-sdist`.
-- **`poetry-lock-update`** — Runs `poetry update` under a minimum-release-age cooldown (`POETRY_SOLVER_MIN_RELEASE_AGE`, default 7 days) and opens a pull request with the `poetry.lock` diff. Requires a GitHub App (`APP_ID` / `APP_PRIVATE_KEY`) for authenticated pushes. Must be called after `base-setup`.
+- **`poetry-lock-update`** — Runs `poetry update` under a minimum-release-age cooldown (`POETRY_SOLVER_MIN_RELEASE_AGE`, default 7 days) and opens a pull request with the `poetry.lock` diff, updating an existing open PR on the branch in place instead of opening a duplicate. Requires a GitHub App (`APP_ID` / `APP_PRIVATE_KEY`) for authenticated pushes. Must be called after `base-setup`.
 - **`enforce-label`** — Wraps `yogevbd/enforce-label-action`; requires one of: `bug`, `enhancement`, `dependencies`, `maintenance`, `documentation`.
 - **`release`** — Full release pipeline: bumps version via Poetry, generates and writes CHANGELOG.md, commits and pushes, creates GitHub release, then bumps to next `.dev` version using `actions/release/bump_dev.py`. Supports dry-run. Requires a GitHub App (`APP_ID` / `APP_PRIVATE_KEY`) for authenticated pushes.
 - **`test-minimum-versions`** — Rewrites `pyproject.toml` to pin all deps to their minimum declared versions, then runs the test suite.

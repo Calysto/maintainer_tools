@@ -209,3 +209,6 @@ __marimo__/
 
 # CLAUDE.md is an intentional, tracked project file — override the user's global ~/.gitignore exclusion
 !CLAUDE.md
+
+# Local git worktrees
+.worktrees/
