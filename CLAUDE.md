@@ -8,8 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 just install          # Install dependencies via Poetry
 just test             # Run all tests
 just test tests/test_foo.py::test_bar  # Run a single test
-just pre-commit       # Run pre-commit hooks on all files
-just pre-commit --hook-stage=manual   # Also run actionlint on workflow files
+just lint             # Run pre-commit hooks on all files
+just lint-all         # Also run actionlint on workflow files (manual-stage hooks)
 ```
 
 ## Architecture

@@ -149,7 +149,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: $/actions/base-setup
-      - run: just pre-commit --hook-stage=manual
+      - run: just lint-all
       - name: Validate pyproject.toml
         run: |
           pipx install 'validate-pyproject[all]'
