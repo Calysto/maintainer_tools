@@ -50,7 +50,7 @@ runs:
       run: echo "dir=$(prek cache dir)" >> $GITHUB_OUTPUT
 
     - name: Cache prek environments
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ${{ steps.prek-cache-dir.outputs.dir }}
         key: prek-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml', 'prek.toml') }}
