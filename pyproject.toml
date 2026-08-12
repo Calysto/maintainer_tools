@@ -20,7 +20,10 @@ classifiers = [
 
 [dependency-groups]
 test = ["pytest>=8.0"]
-dev = ["pre-commit>=3.0", { include-group = "test" }]
+# Split out so `dev` stays a homogeneous array (all table entries) — a mixed
+# string/table array crashes Dependabot's Poetry resolver (toml-rb).
+dev-extra = ["pre-commit>=3.0"]
+dev = [{ include-group = "test" }, { include-group = "dev-extra" }]
 
 [build-system]
 requires = ["poetry-core"]
