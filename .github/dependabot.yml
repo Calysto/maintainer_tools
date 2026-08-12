@@ -16,3 +16,5 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 7
+    # Security updates only; routine lock refreshes run in .github/workflows/lock-update.yml
+    open-pull-requests-limit: 0
