@@ -1,6 +1,8 @@
-## 1.6.1
+## 1.6.2
 
-### Bugs Fixed
+### Maintenance and upkeep improvements
 
-- fix: stop poetry-lock-update from opening duplicate PRs
-  - PR: #49
+- Standardize justfile targets
+  - PR: #50
+- Bump build-and-inspect-python-package to v3.0.1
+  - PR: #51
