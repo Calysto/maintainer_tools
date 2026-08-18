@@ -107,6 +107,8 @@ jobs:
         run: bash actions/poetry-lock-update/test_diff_lock.sh
       - name: Test decide_pr_action.sh
         run: bash actions/poetry-lock-update/test_decide_pr_action.sh
+      - name: Test resolve_lock.py
+        run: bash actions/poetry-lock-update/test_resolve_lock.sh
 
   test_pre_commit_autoupdate:
     if: github.event_name != 'schedule' || github.repository == 'Calysto/maintainer_tools'
