@@ -16,6 +16,10 @@ MAX_ATTEMPTS = 5
 COOLDOWN_HEADER = "were ignored due to solver.min-release-age"
 SUPPRESSED_RE = re.compile(r"^Source \([^)]+\): (?P<pkg>[A-Za-z0-9._-]+): (?P<versions>.+)$")
 NAME_RE = re.compile(r"[A-Za-z0-9._-]+")
+# Poetry's mixology/failure.py numbers each derivation when the conflict
+# graph has a diamond, prefixing lines with "(N) " or with padding spaces
+# instead of starting flush with "Because ".
+BECAUSE_RE = re.compile(r"^(?:\(\d+\)|\s)*Because ")
 
 
 def normalize(name: str) -> str:
@@ -50,19 +54,20 @@ def parse_suppressed(output: str) -> dict[str, str]:
 def parse_blamed(output: str) -> set[str]:
     """Collect normalized package names from the solver's failure explanation.
 
-    Poetry's SolverProblemError explanation always begins with a line starting
-    with "Because ". Only that line and everything after it can name a package
-    the solver actually blamed. Scanning earlier lines too would pick up
-    Poetry's fixed status lines ("Updating dependencies", "Resolving
-    dependencies...") as false-positive package names, since words like
-    `dependencies` and `resolving` are themselves real, live PyPI project
-    names.
+    Poetry's SolverProblemError explanation always begins with a line matching
+    "Because ", optionally prefixed with a "(N) " derivation number or padding
+    spaces when the conflict graph has a diamond. Only that line and
+    everything after it can name a package the solver actually blamed.
+    Scanning earlier lines too would pick up Poetry's fixed status lines
+    ("Updating dependencies", "Resolving dependencies...") as false-positive
+    package names, since words like `dependencies` and `resolving` are
+    themselves real, live PyPI project names.
     """
     blamed: set[str] = set()
     in_explanation = False
     for line in output.splitlines():
         if not in_explanation:
-            if not line.startswith("Because "):
+            if not BECAUSE_RE.match(line):
                 continue
             in_explanation = True
         blamed.update(normalize(name) for name in NAME_RE.findall(line))
@@ -138,8 +143,9 @@ def report(excluded: dict[str, str]) -> None:
     detail = ", ".join(f"{name} {version}" for name, version in sorted(excluded.items()))
     print(
         "::warning::Release-age cooldown waived for: "
-        f"{detail}. No version satisfying the dependency graph was old enough; "
-        "the locked version has NOT met the configured cooldown."
+        f"{detail} (the suppressed version that triggered each waiver). No "
+        "version satisfying the dependency graph was old enough; the version "
+        "now locked has NOT met the configured cooldown."
     )
 
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -149,11 +155,13 @@ def report(excluded: dict[str, str]) -> None:
             f.write(
                 "The release-age cooldown was waived for these packages because no "
                 "version satisfying the dependency graph was old enough to pass it. "
-                "The locked version below has **not** met the configured cooldown — "
-                "review it as you would any early-release upgrade. The waiver is "
-                "package-scoped, not version-scoped, so the solver was free to lock "
-                "the newest version that satisfies the constraint, which may be only "
-                "hours old.\n\n"
+                "The version below is the suppressed version that triggered each "
+                "waiver, not necessarily the version now in the lock file — see "
+                "**Updated packages** for that. Either way, the version now locked "
+                "has **not** met the configured cooldown — review it as you would "
+                "any early-release upgrade. The waiver is package-scoped, not "
+                "version-scoped, so the solver was free to lock the newest version "
+                "that satisfies the constraint, which may be only hours old.\n\n"
             )
             for name, version in sorted(excluded.items()):
                 f.write(f"- `{name}` `{version}`\n")

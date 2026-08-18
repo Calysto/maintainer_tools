@@ -235,4 +235,24 @@ cap_log_has_cap_note=0
 grep -qi "attempt cap" "$RUN_DIR/log" && cap_log_has_cap_note=1
 check "attempt cap exhaustion is called out in the error text" "1" "$cap_log_has_cap_note"
 
+# Regression for numbered derivations: Poetry's mixology/failure.py prefixes
+# every line with "(N) " or with padding spaces when the conflict graph has a
+# diamond, so no line starts with "Because " at column 0. The gate must still
+# recognize the explanation once it starts, or a waivable cooldown conflict
+# turns into a hard failure.
+cat > "$TMPDIR/numbered.txt" <<'EOF'
+Updating dependencies
+Resolving dependencies...
+Source (PyPI): The following package versions were ignored due to solver.min-release-age=7
+Source (PyPI): metakernel: 1.0.6, 1.0.7
+
+(1) Because metakernel (>=1.0) depends on alpha (>=1.0)
+ and beta (>=1.0) depends on alpha (>=1.0), metakernel is forbidden.
+(2) So, because gamma (>=1.0) depends on delta (>=1.0), left is forbidden.
+EOF
+
+check "numbered derivations are still recognized as the failure explanation" \
+  "metakernel==1.0.7" \
+  "$(culprits "$TMPDIR/numbered.txt")"
+
 exit $FAIL
