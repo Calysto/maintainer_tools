@@ -44,7 +44,7 @@ runs:
       shell: bash
       run: cp poetry.lock "${{ runner.temp }}/poetry.lock.before"
 
-    - name: Run poetry update
+    - name: Resolve poetry lock
       id: resolve
       shell: bash
       run: |
