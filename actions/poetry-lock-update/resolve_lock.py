@@ -48,17 +48,23 @@ def parse_suppressed(output: str) -> dict[str, str]:
 
 
 def parse_blamed(output: str) -> set[str]:
-    """Collect normalized package names from everything outside the suppressed blocks."""
+    """Collect normalized package names from the solver's failure explanation.
+
+    Poetry's SolverProblemError explanation always begins with a line starting
+    with "Because ". Only that line and everything after it can name a package
+    the solver actually blamed. Scanning earlier lines too would pick up
+    Poetry's fixed status lines ("Updating dependencies", "Resolving
+    dependencies...") as false-positive package names, since words like
+    `dependencies` and `resolving` are themselves real, live PyPI project
+    names.
+    """
     blamed: set[str] = set()
-    in_block = False
+    in_explanation = False
     for line in output.splitlines():
-        if COOLDOWN_HEADER in line:
-            in_block = True
-            continue
-        if in_block:
-            if SUPPRESSED_RE.match(line):
+        if not in_explanation:
+            if not line.startswith("Because "):
                 continue
-            in_block = False
+            in_explanation = True
         blamed.update(normalize(name) for name in NAME_RE.findall(line))
     return blamed
 

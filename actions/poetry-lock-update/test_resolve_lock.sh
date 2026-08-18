@@ -92,6 +92,27 @@ check "no cooldown block yields no culprits" \
   "" \
   "$(culprits "$TMPDIR/clean.txt")"
 
+# Regression for parse_blamed over-waiving: a package literally named
+# "dependencies" is suppressed by the cooldown, and Poetry's own fixed status
+# lines ("Updating dependencies", "Resolving dependencies...") contain that
+# same word. Only the solver's actual failure explanation (starting at the
+# first "Because " line) may blame a package, so this must NOT be waived even
+# though its name collides with the status-line text; only the genuinely
+# blamed "mypy" should come out.
+cat > "$TMPDIR/status_line_collision.txt" <<'EOF'
+Updating dependencies
+Resolving dependencies...
+Source (PyPI): The following package versions were ignored due to solver.min-release-age=7
+Source (PyPI): dependencies: 1.0.0
+Source (PyPI): mypy: 2.3.1
+
+Because octave-kernel depends on mypy (>=2.3.1) which doesn't match any versions, version solving failed.
+EOF
+
+check "status-line words are never treated as blamed packages" \
+  "mypy==2.3.1" \
+  "$(culprits "$TMPDIR/status_line_collision.txt")"
+
 # --- Retry loop ---------------------------------------------------------
 # Fake `poetry` on PATH: attempt N prints out.N, exits with code.N, and records
 # the exclude list it was given to exclude.N.
