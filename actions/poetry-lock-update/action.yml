@@ -45,10 +45,11 @@ runs:
       run: cp poetry.lock "${{ runner.temp }}/poetry.lock.before"
 
     - name: Run poetry update
+      id: resolve
       shell: bash
-      env:
-        POETRY_SOLVER_MIN_RELEASE_AGE: ${{ inputs.min-release-age-days }}
-      run: poetry update --no-interaction --lock
+      run: |
+        python3 "${{ github.action_path }}/resolve_lock.py" \
+          "${{ runner.temp }}/poetry.lock.before" "${{ inputs.min-release-age-days }}"
 
     - name: Create pull request
       shell: bash
@@ -58,6 +59,7 @@ runs:
         LABELS: ${{ inputs.labels }}
         DRY_RUN: ${{ inputs.dry-run }}
         OLD_LOCK: ${{ runner.temp }}/poetry.lock.before
+        WAIVED: ${{ steps.resolve.outputs.waived }}
       run: |
         if git diff --quiet poetry.lock; then
           echo "No changes detected, skipping PR creation"
@@ -73,6 +75,14 @@ runs:
         BODY=""
         if [ -n "$UPDATES" ]; then
           BODY="## Updated packages"$'\n\n'"${UPDATES}"
+        fi
+
+        if [ -n "$WAIVED" ]; then
+          WAIVED_LIST=$(printf '%s' "$WAIVED" | tr ',' '\n' | sed 's/==/` `/; s/^/- `/; s/$/`/')
+          if [ -n "$BODY" ]; then
+            BODY="${BODY}"$'\n\n'
+          fi
+          BODY="${BODY}## Cooldown waived"$'\n\n'"${WAIVED_LIST}"
         fi
 
         git config user.name "github-actions[bot]"
