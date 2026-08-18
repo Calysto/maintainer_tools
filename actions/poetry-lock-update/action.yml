@@ -47,9 +47,12 @@ runs:
     - name: Resolve poetry lock
       id: resolve
       shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        LOCK_BACKUP: ${{ runner.temp }}/poetry.lock.before
+        MIN_RELEASE_AGE_DAYS: ${{ inputs.min-release-age-days }}
       run: |
-        python3 "${{ github.action_path }}/resolve_lock.py" \
-          "${{ runner.temp }}/poetry.lock.before" "${{ inputs.min-release-age-days }}"
+        python3 "$ACTION_PATH/resolve_lock.py" "$LOCK_BACKUP" "$MIN_RELEASE_AGE_DAYS"
 
     - name: Create pull request
       shell: bash

@@ -1,8 +1,7 @@
 """Run `poetry update --lock` under a release-age cooldown.
 
-When the cooldown blocks the only versions that satisfy a constraint, waive the
-cooldown for exactly those packages and retry. Any other resolution failure is
-left as a failure.
+When the cooldown blocks every version satisfying a constraint, waive it for
+those packages and retry. Any other failure stays a failure.
 """
 
 import os
@@ -28,10 +27,9 @@ def normalize(name: str) -> str:
 
 
 def parse_suppressed(output: str) -> dict[str, str]:
-    """Map normalized package name to the highest version the cooldown suppressed.
+    """Map each normalized package name to the highest version the cooldown hid.
 
-    Poetry lists suppressed versions in ascending order, so the last entry on
-    the line is the highest.
+    Poetry lists suppressed versions in ascending order.
     """
     suppressed: dict[str, str] = {}
     in_block = False
@@ -54,14 +52,9 @@ def parse_suppressed(output: str) -> dict[str, str]:
 def parse_blamed(output: str) -> set[str]:
     """Collect normalized package names from the solver's failure explanation.
 
-    Poetry's SolverProblemError explanation always begins with a line matching
-    "Because ", optionally prefixed with a "(N) " derivation number or padding
-    spaces when the conflict graph has a diamond. Only that line and
-    everything after it can name a package the solver actually blamed.
-    Scanning earlier lines too would pick up Poetry's fixed status lines
-    ("Updating dependencies", "Resolving dependencies...") as false-positive
-    package names, since words like `dependencies` and `resolving` are
-    themselves real, live PyPI project names.
+    Earlier lines carry Poetry's status output ("Updating dependencies"), whose
+    words are themselves real PyPI project names and would register as false
+    blames.
     """
     blamed: set[str] = set()
     in_explanation = False
@@ -106,9 +99,8 @@ def run_poetry(env: dict[str, str]) -> tuple[int, str]:
 def resolve(lock_backup: str, min_age_days: str) -> tuple[bool, dict[str, str], bool]:
     """Resolve the lock, waiving the cooldown for packages that block it.
 
-    Returns whether the lock resolved, the packages that were waived, and
-    whether the attempt cap was exhausted (culprits kept turning up faster
-    than the loop could retry them).
+    Returns whether it resolved, the packages waived, and whether the attempt
+    cap ran out.
     """
     excluded: dict[str, str] = {}
     for _ in range(MAX_ATTEMPTS):
@@ -142,10 +134,8 @@ def report(excluded: dict[str, str]) -> None:
 
     detail = ", ".join(f"{name} {version}" for name, version in sorted(excluded.items()))
     print(
-        "::warning::Release-age cooldown waived for: "
-        f"{detail} (the suppressed version that triggered each waiver). No "
-        "version satisfying the dependency graph was old enough; the version "
-        "now locked has NOT met the configured cooldown."
+        f"::warning::Release-age cooldown waived for: {detail}. "
+        "Their locked versions have NOT met the configured cooldown."
     )
 
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -153,15 +143,12 @@ def report(excluded: dict[str, str]) -> None:
         with open(summary, "a") as f:
             f.write("## Cooldown waived\n\n")
             f.write(
-                "The release-age cooldown was waived for these packages because no "
-                "version satisfying the dependency graph was old enough to pass it. "
-                "The version below is the suppressed version that triggered each "
-                "waiver, not necessarily the version now in the lock file — see "
-                "**Updated packages** for that. Either way, the version now locked "
-                "has **not** met the configured cooldown — review it as you would "
-                "any early-release upgrade. The waiver is package-scoped, not "
-                "version-scoped, so the solver was free to lock the newest version "
-                "that satisfies the constraint, which may be only hours old.\n\n"
+                "No version satisfying the dependency graph was old enough to pass "
+                "the release-age cooldown, so it was waived for these packages. "
+                "Their locked versions have **not** met the cooldown; review them "
+                "as you would any early-release upgrade. Versions below are what "
+                "triggered each waiver, and the waiver is package-scoped, so the "
+                "solver may have locked something newer.\n\n"
             )
             for name, version in sorted(excluded.items()):
                 f.write(f"- `{name}` `{version}`\n")
@@ -177,8 +164,7 @@ def main() -> None:
         if cap_exhausted:
             print(
                 f"::error::Resolution did not converge within the {MAX_ATTEMPTS}-attempt cap. "
-                "Each attempt found a new package blocked by the release-age cooldown, "
-                "so the cap was hit before a clean resolve. Packages waived so far: "
+                "Every attempt surfaced a newly blocked package. Waived so far: "
                 + ", ".join(sorted(excluded)),
                 file=sys.stderr,
             )
