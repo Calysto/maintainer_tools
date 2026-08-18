@@ -136,13 +136,25 @@ def report(excluded: dict[str, str]) -> None:
         return
 
     detail = ", ".join(f"{name} {version}" for name, version in sorted(excluded.items()))
-    print(f"::warning::Release-age cooldown waived for: {detail}")
+    print(
+        "::warning::Release-age cooldown waived for: "
+        f"{detail}. No version satisfying the dependency graph was old enough; "
+        "the locked version has NOT met the configured cooldown."
+    )
 
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
         with open(summary, "a") as f:
             f.write("## Cooldown waived\n\n")
-            f.write("Required by a constraint in `pyproject.toml`:\n\n")
+            f.write(
+                "The release-age cooldown was waived for these packages because no "
+                "version satisfying the dependency graph was old enough to pass it. "
+                "The locked version below has **not** met the configured cooldown — "
+                "review it as you would any early-release upgrade. The waiver is "
+                "package-scoped, not version-scoped, so the solver was free to lock "
+                "the newest version that satisfies the constraint, which may be only "
+                "hours old.\n\n"
+            )
             for name, version in sorted(excluded.items()):
                 f.write(f"- `{name}` `{version}`\n")
             f.write("\n")
