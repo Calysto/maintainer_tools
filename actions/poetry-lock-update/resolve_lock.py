@@ -108,8 +108,10 @@ def resolve(lock_backup: str, min_age_days: str) -> tuple[bool, dict[str, str]]:
         shutil.copyfile(lock_backup, "poetry.lock")
         env = dict(os.environ)
         env["POETRY_SOLVER_MIN_RELEASE_AGE"] = min_age_days
-        if excluded:
-            env["POETRY_SOLVER_MIN_RELEASE_AGE_EXCLUDE"] = ",".join(sorted(excluded))
+        # Always set explicitly, even to "" on the first attempt: an ambient
+        # value set at the workflow level must not leak into a resolve that
+        # hasn't earned any waivers yet.
+        env["POETRY_SOLVER_MIN_RELEASE_AGE_EXCLUDE"] = ",".join(sorted(excluded))
         code, output = run_poetry(env)
         if code == 0:
             return True, excluded

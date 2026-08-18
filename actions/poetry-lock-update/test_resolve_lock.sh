@@ -175,6 +175,22 @@ check "first attempt has no exclude list" "" "$(cat "$STUB_DIR/exclude.1")"
 check "retry excludes only metakernel" "metakernel" "$(cat "$STUB_DIR/exclude.2")"
 check "waived output names the version" "waived=metakernel==1.0.7" "$(cat "$GH_OUTPUT")"
 
+# The exclude env var must be set explicitly on every attempt, including the
+# first, so an ambient value from the workflow environment can never leak
+# through unwaived. Without this, a stray POETRY_SOLVER_MIN_RELEASE_AGE_EXCLUDE
+# set at the job level would be silently honored on attempt 1.
+run_resolve
+cp "$TMPDIR/clean.txt" "$STUB_DIR/out.1"
+RC=0
+(
+  cd "$RUN_DIR"
+  STUB_DIR="$STUB_DIR" PATH="$STUB_DIR/bin:$PATH" \
+    GITHUB_OUTPUT="$GH_OUTPUT" GITHUB_STEP_SUMMARY="$RUN_DIR/summary" \
+    POETRY_SOLVER_MIN_RELEASE_AGE_EXCLUDE="ambient-leftover" \
+    python3 "$SCRIPT" "$RUN_DIR/poetry.lock.before" 7
+) > "$RUN_DIR/log" 2>&1 || RC=$?
+check "ambient exclude env var is overridden on first attempt" "" "$(cat "$STUB_DIR/exclude.1")"
+
 # Waiving one package exposes a second.
 cat > "$TMPDIR/chain.txt" <<'EOF'
 Resolving dependencies...
