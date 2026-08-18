@@ -98,10 +98,12 @@ def run_poetry(env: dict[str, str]) -> tuple[int, str]:
     return proc.wait(), "".join(captured)
 
 
-def resolve(lock_backup: str, min_age_days: str) -> tuple[bool, dict[str, str]]:
+def resolve(lock_backup: str, min_age_days: str) -> tuple[bool, dict[str, str], bool]:
     """Resolve the lock, waiving the cooldown for packages that block it.
 
-    Returns whether the lock resolved, and the packages that were waived.
+    Returns whether the lock resolved, the packages that were waived, and
+    whether the attempt cap was exhausted (culprits kept turning up faster
+    than the loop could retry them).
     """
     excluded: dict[str, str] = {}
     for _ in range(MAX_ATTEMPTS):
@@ -114,12 +116,12 @@ def resolve(lock_backup: str, min_age_days: str) -> tuple[bool, dict[str, str]]:
         env["POETRY_SOLVER_MIN_RELEASE_AGE_EXCLUDE"] = ",".join(sorted(excluded))
         code, output = run_poetry(env)
         if code == 0:
-            return True, excluded
+            return True, excluded, False
         culprits = find_culprits(output, set(excluded))
         if not culprits:
-            return False, excluded
+            return False, excluded, False
         excluded.update(culprits)
-    return False, excluded
+    return False, excluded, True
 
 
 def report(excluded: dict[str, str]) -> None:
@@ -150,9 +152,17 @@ def main() -> None:
     if len(sys.argv) != 3:
         print("Usage: resolve_lock.py <lock-backup> <min-release-age-days>", file=sys.stderr)
         sys.exit(2)
-    resolved, excluded = resolve(sys.argv[1], sys.argv[2])
+    resolved, excluded, cap_exhausted = resolve(sys.argv[1], sys.argv[2])
     if not resolved:
-        if excluded:
+        if cap_exhausted:
+            print(
+                f"::error::Resolution did not converge within the {MAX_ATTEMPTS}-attempt cap. "
+                "Each attempt found a new package blocked by the release-age cooldown, "
+                "so the cap was hit before a clean resolve. Packages waived so far: "
+                + ", ".join(sorted(excluded)),
+                file=sys.stderr,
+            )
+        elif excluded:
             print(
                 "::error::Resolution failed after waiving the release-age cooldown for: "
                 + ", ".join(sorted(excluded)),

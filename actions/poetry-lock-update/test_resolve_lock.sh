@@ -217,6 +217,10 @@ invoke_resolve
 check "genuine conflict exits 1" "1" "$RC"
 check "genuine conflict does not retry" "1" "$(cat "$STUB_DIR/attempt")"
 
+genuine_log_has_cap_note=0
+grep -qi "attempt cap" "$RUN_DIR/log" && genuine_log_has_cap_note=1
+check "genuine conflict error does not mention the attempt cap" "0" "$genuine_log_has_cap_note"
+
 # Attempt cap: a new culprit every round.
 run_resolve
 for n in 1 2 3 4 5 6; do
@@ -226,5 +230,9 @@ done
 invoke_resolve
 check "attempt cap exits 1" "1" "$RC"
 check "attempt cap stops at 5" "5" "$(cat "$STUB_DIR/attempt")"
+
+cap_log_has_cap_note=0
+grep -qi "attempt cap" "$RUN_DIR/log" && cap_log_has_cap_note=1
+check "attempt cap exhaustion is called out in the error text" "1" "$cap_log_has_cap_note"
 
 exit $FAIL
