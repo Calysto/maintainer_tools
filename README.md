@@ -158,6 +158,8 @@ ______________________________________________________________________
 
 Runs `poetry update` under a minimum-release-age cooldown and opens a pull request with the `poetry.lock` changes — or, if a lock-update PR is already open, force-pushes the refreshed lock file to it instead of opening a duplicate. Requires `base-setup` to run before this action. Optionally generates a GitHub App token for authenticated pushes.
 
+If the cooldown blocks every version that satisfies a dependency constraint, the resolve is retried with the cooldown waived for exactly the blocking packages, up to 5 attempts. A genuine dependency conflict still fails the run. When any package's cooldown was waived, the pull request body gains a `## Cooldown waived` section listing each package and the version that was locked.
+
 **Inputs**
 
 | Name | Required | Default | Description |
