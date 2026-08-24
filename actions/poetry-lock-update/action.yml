@@ -52,6 +52,9 @@ runs:
         LOCK_BACKUP: ${{ runner.temp }}/poetry.lock.before
         MIN_RELEASE_AGE_DAYS: ${{ inputs.min-release-age-days }}
       run: |
+        # resolve_lock.py needs tomllib (Python 3.11+) or its tomli fallback
+        # to compare locked versions before/after the update.
+        python3 -c "import tomllib" 2>/dev/null || pip install --quiet tomli
         python3 "$ACTION_PATH/resolve_lock.py" "$LOCK_BACKUP" "$MIN_RELEASE_AGE_DAYS"
 
     - name: Create pull request

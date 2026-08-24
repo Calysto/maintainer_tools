@@ -1,7 +1,11 @@
 """Run `poetry update --lock` under a release-age cooldown.
 
 When the cooldown blocks every version satisfying a constraint, waive it for
-those packages and retry. Any other failure stays a failure.
+those packages and retry. When the cooldown lets resolution "succeed" by
+silently regressing a package to an older version than what was already
+locked, waive it and retry too -- Poetry only logs suppressed versions at
+-vv, so a quiet downgrade is otherwise invisible in normal output. Any other
+failure stays a failure.
 """
 
 import os
@@ -9,6 +13,11 @@ import re
 import shutil
 import subprocess
 import sys
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib  # type: ignore[no-redef]
 
 MAX_ATTEMPTS = 5
 
@@ -20,16 +29,61 @@ NAME_RE = re.compile(r"[A-Za-z0-9._-]+")
 # instead of starting flush with "Because ".
 BECAUSE_RE = re.compile(r"^(?:\(\d+\)|\s)*Because ")
 
+# Best-effort PEP 440-ish sort key. Numeric release segments compare as
+# integers, everything else compares as text. This is not a full PEP 440
+# parser -- pre/post/dev-release ordering can be wrong -- but it is good
+# enough to catch the common case this guards against: a plain release
+# version regressing to an older plain release version.
+_VERSION_TOKEN_RE = re.compile(r"\d+|[A-Za-z]+")
+
 
 def normalize(name: str) -> str:
     """Normalize a package name per PEP 503."""
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
+def version_key(version: str) -> tuple:
+    """Sort key for best-effort version comparison. See module docstring caveat."""
+    return tuple(
+        (0, int(tok)) if tok.isdigit() else (1, tok)
+        for tok in _VERSION_TOKEN_RE.findall(version)
+    )
+
+
+def load_locked_versions(path: str) -> dict[str, str]:
+    """Map each normalized package name to its locked version."""
+    with open(path, "rb") as f:
+        data = tomllib.load(f)
+    return {normalize(pkg["name"]): pkg["version"] for pkg in data.get("package", [])}
+
+
+def find_downgrades(before: dict[str, str], after: dict[str, str]) -> dict[str, str]:
+    """Return packages whose locked version regressed, mapped to the old version.
+
+    A regression here is the signal that matters: whether it was actually
+    caused by the release-age cooldown or by some other constraint change,
+    Poetry does not tell us anything at normal verbosity. Waiving the
+    cooldown and retrying is the right response if it *was* the cooldown; if
+    it wasn't, the retry reproduces the same version and the caller treats
+    that as confirmation the regression is unrelated to the cooldown.
+    """
+    downgraded = {}
+    for name, old_version in before.items():
+        new_version = after.get(name)
+        if new_version is None:
+            continue
+        if version_key(new_version) < version_key(old_version):
+            downgraded[name] = old_version
+    return downgraded
+
+
 def parse_suppressed(output: str) -> dict[str, str]:
     """Map each normalized package name to the highest version the cooldown hid.
 
-    Poetry lists suppressed versions in ascending order.
+    Poetry lists suppressed versions in ascending order. This only appears in
+    Poetry's output when resolution fails outright and it explains why, so it
+    complements (but cannot replace) find_downgrades, which is what catches a
+    "successful" resolution that quietly picked an older version.
     """
     suppressed: dict[str, str] = {}
     in_block = False
@@ -96,13 +150,21 @@ def run_poetry(env: dict[str, str]) -> tuple[int, str]:
     return proc.wait(), "".join(captured)
 
 
-def resolve(lock_backup: str, min_age_days: str) -> tuple[bool, dict[str, str], bool]:
+def resolve(
+    lock_backup: str, min_age_days: str
+) -> tuple[bool, dict[str, str], bool, dict[str, str]]:
     """Resolve the lock, waiving the cooldown for packages that block it.
 
-    Returns whether it resolved, the packages waived, and whether the attempt
-    cap ran out.
+    Returns whether it resolved, the packages waived, whether the attempt cap
+    ran out, and any downgrades that persisted even after being waived (i.e.
+    regressions the cooldown wasn't responsible for, surfaced for a human to
+    look at rather than treated as a failure).
     """
+    before = load_locked_versions(lock_backup)
     excluded: dict[str, str] = {}
+    retried_for_downgrade: set[str] = set()
+    unexplained_downgrades: dict[str, str] = {}
+
     for _ in range(MAX_ATTEMPTS):
         shutil.copyfile(lock_backup, "poetry.lock")
         env = dict(os.environ)
@@ -112,54 +174,104 @@ def resolve(lock_backup: str, min_age_days: str) -> tuple[bool, dict[str, str], 
         # hasn't earned any waivers yet.
         env["POETRY_SOLVER_MIN_RELEASE_AGE_EXCLUDE"] = ",".join(sorted(excluded))
         code, output = run_poetry(env)
+
         if code == 0:
-            return True, excluded, False
+            downgrades = find_downgrades(before, load_locked_versions("poetry.lock"))
+            # Only chase downgrades we haven't already tried waiving: if we
+            # excluded a package for this exact reason last attempt and it
+            # regressed again anyway, the cooldown isn't the cause -- stop
+            # retrying it and report it instead of looping to the cap.
+            new_downgrades = {
+                name: version
+                for name, version in downgrades.items()
+                if name not in retried_for_downgrade
+            }
+            still_downgraded = {
+                name: version
+                for name, version in downgrades.items()
+                if name in retried_for_downgrade
+            }
+            unexplained_downgrades.update(still_downgraded)
+            if not new_downgrades:
+                return True, excluded, False, unexplained_downgrades
+            retried_for_downgrade.update(new_downgrades)
+            excluded.update(new_downgrades)
+            continue
+
         culprits = find_culprits(output, set(excluded))
         if not culprits:
-            return False, excluded, False
+            return False, excluded, False, unexplained_downgrades
         excluded.update(culprits)
-    return False, excluded, True
+
+    return False, excluded, True, unexplained_downgrades
 
 
-def report(excluded: dict[str, str]) -> None:
-    """Write the waived packages to the step output, annotation, and summary."""
+def report(excluded: dict[str, str], unexplained_downgrades: dict[str, str]) -> None:
+    """Write the waived packages and any unresolved downgrades to the step
+    output, annotation, and summary."""
     waived = ",".join(f"{name}=={version}" for name, version in sorted(excluded.items()))
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output:
         with open(github_output, "a") as f:
             f.write(f"waived={waived}\n")
+            downgrades_str = ",".join(
+                f"{name}=={version}" for name, version in sorted(unexplained_downgrades.items())
+            )
+            f.write(f"downgrades={downgrades_str}\n")
 
-    if not excluded:
-        return
+    if excluded:
+        detail = ", ".join(f"{name} {version}" for name, version in sorted(excluded.items()))
+        print(
+            f"::warning::Release-age cooldown waived for: {detail}. "
+            "Their locked versions have NOT met the configured cooldown."
+        )
 
-    detail = ", ".join(f"{name} {version}" for name, version in sorted(excluded.items()))
-    print(
-        f"::warning::Release-age cooldown waived for: {detail}. "
-        "Their locked versions have NOT met the configured cooldown."
-    )
+    if unexplained_downgrades:
+        detail = ", ".join(
+            f"{name} (was {version})" for name, version in sorted(unexplained_downgrades.items())
+        )
+        print(
+            f"::warning::These packages were locked to an OLDER version than before, "
+            f"even with the release-age cooldown waived, so the cooldown was not the "
+            f"cause -- review the resolution: {detail}"
+        )
 
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
         with open(summary, "a") as f:
-            f.write("## Cooldown waived\n\n")
-            f.write(
-                "No version satisfying the dependency graph was old enough to pass "
-                "the release-age cooldown, so it was waived for these packages. "
-                "Their locked versions have **not** met the cooldown; review them "
-                "as you would any early-release upgrade. Versions below are what "
-                "triggered each waiver, and the waiver is package-scoped, so the "
-                "solver may have locked something newer.\n\n"
-            )
-            for name, version in sorted(excluded.items()):
-                f.write(f"- `{name}` `{version}`\n")
-            f.write("\n")
+            if excluded:
+                f.write("## Cooldown waived\n\n")
+                f.write(
+                    "No version satisfying the dependency graph was old enough to pass "
+                    "the release-age cooldown, so it was waived for these packages. "
+                    "Their locked versions have **not** met the cooldown; review them "
+                    "as you would any early-release upgrade. Versions below are what "
+                    "triggered each waiver, and the waiver is package-scoped, so the "
+                    "solver may have locked something newer.\n\n"
+                )
+                for name, version in sorted(excluded.items()):
+                    f.write(f"- `{name}` `{version}`\n")
+                f.write("\n")
+            if unexplained_downgrades:
+                f.write("## Unresolved downgrades\n\n")
+                f.write(
+                    "These packages resolved to a version **older** than what was already "
+                    "locked, and waiving the release-age cooldown for them did not change "
+                    "that -- so the cooldown was not the cause. This may be a legitimate "
+                    "constraint change elsewhere in the dependency graph, but it's worth "
+                    "checking by hand before merging. Versions below are what was locked "
+                    "before this update.\n\n"
+                )
+                for name, version in sorted(unexplained_downgrades.items()):
+                    f.write(f"- `{name}` was `{version}`\n")
+                f.write("\n")
 
 
 def main() -> None:
     if len(sys.argv) != 3:
         print("Usage: resolve_lock.py <lock-backup> <min-release-age-days>", file=sys.stderr)
         sys.exit(2)
-    resolved, excluded, cap_exhausted = resolve(sys.argv[1], sys.argv[2])
+    resolved, excluded, cap_exhausted, unexplained_downgrades = resolve(sys.argv[1], sys.argv[2])
     if not resolved:
         if cap_exhausted:
             print(
@@ -180,7 +292,7 @@ def main() -> None:
                 file=sys.stderr,
             )
         sys.exit(1)
-    report(excluded)
+    report(excluded, unexplained_downgrades)
 
 
 if __name__ == "__main__":

@@ -114,8 +114,12 @@ check "status-line words are never treated as blamed packages" \
   "$(culprits "$TMPDIR/status_line_collision.txt")"
 
 # --- Retry loop ---------------------------------------------------------
-# Fake `poetry` on PATH: attempt N prints out.N, exits with code.N, and records
-# the exclude list it was given to exclude.N.
+# Fake `poetry` on PATH: attempt N prints out.N, exits with code.N, records
+# the exclude list it was given to exclude.N, and -- if lock.$N exists --
+# overwrites poetry.lock with it (simulating a resolution that changed
+# locked versions; resolve_lock.py itself resets poetry.lock to the backup
+# before every attempt, so with no lock.$N the file is just left as-is,
+# i.e. identical to the backup, meaning "nothing changed").
 STUB_DIR="$TMPDIR/stub"
 mkdir -p "$STUB_DIR/bin"
 cat > "$STUB_DIR/bin/poetry" <<'EOF'
@@ -126,6 +130,7 @@ echo "$N" > "$STUB_DIR/attempt"
 printf '%s' "${POETRY_SOLVER_MIN_RELEASE_AGE_EXCLUDE-}" > "$STUB_DIR/exclude.$N"
 printf '%s' "${POETRY_SOLVER_MIN_RELEASE_AGE-}" > "$STUB_DIR/age.$N"
 [ -f "$STUB_DIR/out.$N" ] && cat "$STUB_DIR/out.$N"
+[ -f "$STUB_DIR/lock.$N" ] && cp "$STUB_DIR/lock.$N" poetry.lock
 [ -f "$STUB_DIR/code.$N" ] && exit "$(cat "$STUB_DIR/code.$N")"
 exit 0
 EOF
@@ -134,12 +139,20 @@ chmod +x "$STUB_DIR/bin/poetry"
 # Reset stub state and run resolve_lock.py in a scratch working directory.
 # Sets: RC, GH_OUTPUT, RUN_DIR.
 run_resolve() {
-  rm -f "$STUB_DIR"/out.* "$STUB_DIR"/code.* "$STUB_DIR"/exclude.* "$STUB_DIR"/age.*
+  rm -f "$STUB_DIR"/out.* "$STUB_DIR"/code.* "$STUB_DIR"/exclude.* "$STUB_DIR"/age.* "$STUB_DIR"/lock.*
   echo 0 > "$STUB_DIR/attempt"
   RUN_DIR="$TMPDIR/run"
   rm -rf "$RUN_DIR"
   mkdir -p "$RUN_DIR"
-  echo "backup" > "$RUN_DIR/poetry.lock.before"
+  cat > "$RUN_DIR/poetry.lock.before" <<'LOCK'
+[[package]]
+name = "metakernel"
+version = "1.0.5"
+
+[[package]]
+name = "widget"
+version = "1.9.0"
+LOCK
   GH_OUTPUT="$RUN_DIR/gh_output"
   : > "$GH_OUTPUT"
 }
@@ -159,7 +172,7 @@ run_resolve
 cp "$TMPDIR/clean.txt" "$STUB_DIR/out.1"
 invoke_resolve
 check "clean success exits 0" "0" "$RC"
-check "clean success waives nothing" "waived=" "$(cat "$GH_OUTPUT")"
+check "clean success waives nothing" "$(printf 'waived=\ndowngrades=')" "$(cat "$GH_OUTPUT")"
 check "clean success runs once" "1" "$(cat "$STUB_DIR/attempt")"
 check "cooldown days passed through" "7" "$(cat "$STUB_DIR/age.1")"
 
@@ -173,7 +186,8 @@ check "cooldown conflict exits 0 after retry" "0" "$RC"
 check "cooldown conflict runs twice" "2" "$(cat "$STUB_DIR/attempt")"
 check "first attempt has no exclude list" "" "$(cat "$STUB_DIR/exclude.1")"
 check "retry excludes only metakernel" "metakernel" "$(cat "$STUB_DIR/exclude.2")"
-check "waived output names the version" "waived=metakernel==1.0.7" "$(cat "$GH_OUTPUT")"
+check "waived output names the version" \
+  "$(printf 'waived=metakernel==1.0.7\ndowngrades=')" "$(cat "$GH_OUTPUT")"
 
 # The exclude env var must be set explicitly on every attempt, including the
 # first, so an ambient value from the workflow environment can never leak
@@ -254,5 +268,80 @@ EOF
 check "numbered derivations are still recognized as the failure explanation" \
   "metakernel==1.0.7" \
   "$(culprits "$TMPDIR/numbered.txt")"
+
+# --- Silent downgrade guard --------------------------------------------
+# Reproduces the real-world bug: `poetry update --lock` exits 0 (no error,
+# no cooldown message at normal verbosity -- that only appears at -vv) but
+# quietly relocks a package to an OLDER version than what was already
+# locked, because the true latest version fell inside the release-age
+# cooldown window. resolve_lock.py must notice this from the lock file
+# diff alone and retry with that package's cooldown waived.
+cat > "$TMPDIR/downgrade_1.txt" <<'EOF'
+Updating dependencies
+Resolving dependencies...
+Writing lock file
+EOF
+
+run_resolve
+cp "$TMPDIR/downgrade_1.txt" "$STUB_DIR/out.1"
+cat > "$STUB_DIR/lock.1" <<'EOF'
+[[package]]
+name = "metakernel"
+version = "1.0.4"
+
+[[package]]
+name = "widget"
+version = "1.9.0"
+EOF
+cp "$TMPDIR/downgrade_1.txt" "$STUB_DIR/out.2"
+cat > "$STUB_DIR/lock.2" <<'EOF'
+[[package]]
+name = "metakernel"
+version = "1.0.5"
+
+[[package]]
+name = "widget"
+version = "1.9.0"
+EOF
+invoke_resolve
+check "silent downgrade exits 0 after retry" "0" "$RC"
+check "silent downgrade runs twice" "2" "$(cat "$STUB_DIR/attempt")"
+check "silent downgrade retry waives only the regressed package" \
+  "metakernel" "$(cat "$STUB_DIR/exclude.2")"
+check "silent downgrade waived output names the pre-downgrade version" \
+  "$(printf 'waived=metakernel==1.0.5\ndowngrades=')" "$(cat "$GH_OUTPUT")"
+
+downgrade_log_has_warning=0
+grep -q "were locked to an OLDER version" "$RUN_DIR/log" && downgrade_log_has_warning=0
+grep -q "Release-age cooldown waived for: metakernel" "$RUN_DIR/log" && downgrade_log_has_warning=1
+check "waived-cooldown warning is printed for the regressed package" "1" "$downgrade_log_has_warning"
+
+# A downgrade that persists even after its cooldown is waived is NOT the
+# cooldown's fault -- some other constraint moved. resolve_lock.py must
+# accept the resolution (not block automation or loop to the attempt cap)
+# but call it out clearly instead of silently waiving forever.
+run_resolve
+cp "$TMPDIR/downgrade_1.txt" "$STUB_DIR/out.1"
+cat > "$STUB_DIR/lock.1" <<'EOF'
+[[package]]
+name = "metakernel"
+version = "1.0.4"
+
+[[package]]
+name = "widget"
+version = "1.9.0"
+EOF
+cp "$TMPDIR/downgrade_1.txt" "$STUB_DIR/out.2"
+cp "$STUB_DIR/lock.1" "$STUB_DIR/lock.2"
+invoke_resolve
+check "unexplained downgrade still exits 0" "0" "$RC"
+check "unexplained downgrade does not loop past the retry" "2" "$(cat "$STUB_DIR/attempt")"
+check "unexplained downgrade output records it separately from waivers" \
+  "$(printf 'waived=metakernel==1.0.5\ndowngrades=metakernel==1.0.5')" "$(cat "$GH_OUTPUT")"
+
+unexplained_log_has_warning=0
+grep -q "were locked to an OLDER version than before, even with the release-age cooldown waived" "$RUN_DIR/log" \
+  && unexplained_log_has_warning=1
+check "unexplained-downgrade warning is printed" "1" "$unexplained_log_has_warning"
 
 exit $FAIL
