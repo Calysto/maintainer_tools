@@ -1,11 +1,6 @@
-## 1.6.5
+## 1.6.6
 
 ### Bugs Fixed
 
-- Guard poetry-lock-update against silent release-age downgrades
-  - PR: #59
-
-### Maintenance and upkeep improvements
-
-- chore: update poetry.lock
-  - PR: #58
+- Fix prek update command
+  - PR: #60
