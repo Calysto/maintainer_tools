@@ -61,7 +61,7 @@ runs:
       shell: bash
       env:
         COOLDOWN_DAYS: ${{ inputs.cooldown-days }}
-      run: prek auto-update --cooldown-days "$COOLDOWN_DAYS"
+      run: prek update --cooldown-days "$COOLDOWN_DAYS"
 
     - name: Create pull request
       shell: bash
