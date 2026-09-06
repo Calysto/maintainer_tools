@@ -1,6 +1,13 @@
-## 1.6.6
+## 1.6.7
 
-### Bugs Fixed
+### Maintenance and upkeep improvements
 
-- Fix prek update command
-  - PR: #60
+- chore: update poetry.lock
+  - PR: #62
+
+### Dependency updates
+
+- chore(deps): bump the actions group across 2 directories with 3 updates
+  - PR: #61
+- chore(deps): bump the actions group across 3 directories with 4 updates
+  - PR: #63
