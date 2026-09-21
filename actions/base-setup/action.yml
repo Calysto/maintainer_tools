@@ -6,6 +6,14 @@ inputs:
     required: false
     default: ""
     description: "Python version to use (defaults to minimum version from pyproject.toml)"
+  poetry-version:
+    required: false
+    default: "pre-commit"
+    description: >-
+      Poetry version to install with pipx. The default "pre-commit" installs the
+      version pinned by the poetry hook in .pre-commit-config.yaml, falling back
+      to the latest Poetry when no such hook exists. Pass an explicit version to
+      pin it, or an empty string to skip installing Poetry.
 
 runs:
   using: composite
@@ -30,9 +38,30 @@ runs:
         python-version: ${{ inputs.python-version || steps.get-python-version.outputs.version }}
         allow-prereleases: true
 
-    - name: Install Poetry
+    - name: Resolve Poetry version
+      id: resolve-poetry-version
+      if: inputs.poetry-version == 'pre-commit'
       shell: bash
-      run: pipx install "poetry>=2.3,<3"
+      run: |
+        version=$(python3 "${{ github.action_path }}/get_poetry_version.py")
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Install Poetry
+      if: inputs.poetry-version != ''
+      shell: bash
+      env:
+        POETRY_VERSION: ${{ inputs.poetry-version }}
+        RESOLVED_POETRY_VERSION: ${{ steps.resolve-poetry-version.outputs.version }}
+      run: |
+        if [ "$POETRY_VERSION" = "pre-commit" ]; then
+          if [ -n "$RESOLVED_POETRY_VERSION" ]; then
+            pipx install "poetry==$RESOLVED_POETRY_VERSION"
+          else
+            pipx install poetry
+          fi
+        else
+          pipx install "poetry==$POETRY_VERSION"
+        fi
 
     - name: Cache dependencies
       uses: actions/cache@v6
