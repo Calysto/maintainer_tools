@@ -55,6 +55,7 @@ Installs Python, Poetry (with OS-keyed cache), `just`, and project dependencies.
 | Name | Required | Default | Description |
 |------|----------|---------|-------------|
 | `python-version` | No | `""` | Python version to use. Defaults to the minimum version from `pyproject.toml`. |
+| `poetry-version` | No | `"pre-commit"` | Poetry version to install with `pipx`. The default resolves the version pinned by the poetry hook in `.pre-commit-config.yaml` (falling back to the latest Poetry when no such hook exists), keeping the lock update in sync with the `poetry-check` hook. Pass an explicit version to pin it, or an empty string to skip installing Poetry. |
 
 **Usage**
 
