@@ -40,6 +40,33 @@ runs:
         permission-contents: write
         permission-pull-requests: write
 
+    - name: Align Poetry with the pre-commit hook
+      id: poetry-version
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        MIN_RELEASE_AGE_DAYS: ${{ inputs.min-release-age-days }}
+      run: |
+        HELPER="$ACTION_PATH/../base-setup/get_poetry_version.py"
+        REPO=$(python3 "$HELPER" --repo)
+        if [ -z "$REPO" ]; then
+          echo "No poetry hook in .pre-commit-config.yaml; skipping Poetry version bump"
+          exit 0
+        fi
+
+        OLD_REV=$(python3 "$HELPER")
+        command -v prek >/dev/null || pipx install prek
+        prek update --repo "$REPO" --cooldown-days "$MIN_RELEASE_AGE_DAYS"
+        NEW_REV=$(python3 "$HELPER")
+
+        echo "old=$OLD_REV" >> "$GITHUB_OUTPUT"
+        echo "new=$NEW_REV" >> "$GITHUB_OUTPUT"
+
+        if [ -n "$NEW_REV" ] && [ "$NEW_REV" != "$OLD_REV" ]; then
+          echo "Bumping Poetry $OLD_REV -> $NEW_REV"
+          pipx install --force "poetry==$NEW_REV"
+        fi
+
     - name: Save current lock file
       shell: bash
       run: cp poetry.lock "${{ runner.temp }}/poetry.lock.before"
@@ -66,8 +93,18 @@ runs:
         DRY_RUN: ${{ inputs.dry-run }}
         OLD_LOCK: ${{ runner.temp }}/poetry.lock.before
         WAIVED: ${{ steps.resolve.outputs.waived }}
+        POETRY_OLD: ${{ steps.poetry-version.outputs.old }}
+        POETRY_NEW: ${{ steps.poetry-version.outputs.new }}
       run: |
-        if git diff --quiet poetry.lock; then
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        git checkout -B "$BRANCH"
+
+        # stage_update.sh stages poetry.lock and the hook config and commits
+        # them together, so the regenerated lock and the Poetry version bump
+        # land in the same commit (and PR).
+        if [ "$(bash "${{ github.action_path }}/stage_update.sh")" = "unchanged" ]; then
           echo "No changes detected, skipping PR creation"
           exit 0
         fi
@@ -79,8 +116,14 @@ runs:
         UPDATES=$(python3 "${{ github.action_path }}/diff_lock.py" "$OLD_LOCK" poetry.lock)
 
         BODY=""
+        if [ -n "$POETRY_NEW" ] && [ "$POETRY_NEW" != "$POETRY_OLD" ]; then
+          BODY="## Poetry version"$'\n\n'"\`$POETRY_OLD\` → \`$POETRY_NEW\`"
+        fi
         if [ -n "$UPDATES" ]; then
-          BODY="## Updated packages"$'\n\n'"${UPDATES}"
+          if [ -n "$BODY" ]; then
+            BODY="${BODY}"$'\n\n'
+          fi
+          BODY="${BODY}## Updated packages"$'\n\n'"${UPDATES}"
         fi
 
         if [ -n "$WAIVED" ]; then
@@ -90,13 +133,6 @@ runs:
           fi
           BODY="${BODY}## Cooldown waived"$'\n\n'"${WAIVED_LIST}"
         fi
-
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-        git checkout -B "$BRANCH"
-        git add poetry.lock
-        git commit -m "chore: update poetry.lock"
 
         # Branch is exclusively bot-owned and rebuilt fresh from the base
         # every run, so overwriting whatever is currently on the remote

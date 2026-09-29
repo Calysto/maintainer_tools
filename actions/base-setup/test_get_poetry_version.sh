@@ -38,6 +38,10 @@ check "pinned hook version" \
   "2.4.3" \
   "$(python3 "$SCRIPT" "$TMPDIR/pinned.yaml")"
 
+check "pinned hook repo url" \
+  "https://github.com/python-poetry/poetry" \
+  "$(python3 "$SCRIPT" --repo "$TMPDIR/pinned.yaml")"
+
 cat > "$TMPDIR/no-poetry.yaml" <<'EOF'
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -50,6 +54,10 @@ check "no poetry hook -> empty" \
   "" \
   "$(python3 "$SCRIPT" "$TMPDIR/no-poetry.yaml")"
 
+check "no poetry hook repo -> empty" \
+  "" \
+  "$(python3 "$SCRIPT" --repo "$TMPDIR/no-poetry.yaml")"
+
 cat > "$TMPDIR/quoted.yaml" <<'EOF'
 repos:
   - repo: "https://github.com/python-poetry/poetry.git"
@@ -61,6 +69,10 @@ EOF
 check "quoted repo url and rev" \
   "2.3.0" \
   "$(python3 "$SCRIPT" "$TMPDIR/quoted.yaml")"
+
+check "quoted repo url" \
+  "https://github.com/python-poetry/poetry.git" \
+  "$(python3 "$SCRIPT" --repo "$TMPDIR/quoted.yaml")"
 
 check "missing file -> empty" \
   "" \
