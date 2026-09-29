@@ -14,6 +14,14 @@ inputs:
     required: false
     default: "7"
     description: "Minimum release age in days before updating to a new version"
+  exclude-repos:
+    required: false
+    default: "https://github.com/python-poetry/poetry https://github.com/python-poetry/poetry.git"
+    description: >-
+      Space-separated list of hook repositories to leave untouched. The poetry
+      hook is excluded by default: its version is coupled to poetry.lock (via
+      base-setup), so it is bumped by poetry-lock-update instead, keeping the
+      toolchain and the lock in sync.
   branch:
     required: false
     default: "pre-commit-autoupdate"
@@ -61,7 +69,13 @@ runs:
       shell: bash
       env:
         COOLDOWN_DAYS: ${{ inputs.cooldown-days }}
-      run: prek update --cooldown-days "$COOLDOWN_DAYS"
+        EXCLUDE_REPOS: ${{ inputs.exclude-repos }}
+      run: |
+        EXCLUDE_ARGS=()
+        for repo in $EXCLUDE_REPOS; do
+          EXCLUDE_ARGS+=(--exclude-repo "$repo")
+        done
+        prek update --cooldown-days "$COOLDOWN_DAYS" "${EXCLUDE_ARGS[@]}"
 
     - name: Create pull request
       shell: bash

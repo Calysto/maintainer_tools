@@ -106,6 +106,8 @@ ______________________________________________________________________
 
 Installs [prek](https://prek.j178.dev), runs `prek auto-update` with a configurable cooldown, and opens a pull request with the changes. Optionally generates a GitHub App token for authenticated pushes.
 
+The poetry hook is excluded by default. Its version is coupled to `poetry.lock` (via `base-setup`), so it is bumped by `poetry-lock-update` instead — that keeps the toolchain and the lock in sync and avoids autoupdate PRs that fail the `poetry-lock` hook. Pass `exclude-repos` to change which repositories are left untouched.
+
 **Inputs**
 
 | Name | Required | Default | Description |
@@ -113,6 +115,7 @@ Installs [prek](https://prek.j178.dev), runs `prek auto-update` with a configura
 | `app-id` | No | `""` | GitHub App ID for authenticated pushes. Falls back to `github.token` if not provided. |
 | `app-private-key` | No | `""` | GitHub App private key for authenticated pushes. |
 | `cooldown-days` | No | `"7"` | Minimum release age in days before updating to a new version. |
+| `exclude-repos` | No | `"https://github.com/python-poetry/poetry https://github.com/python-poetry/poetry.git"` | Space-separated list of hook repositories to leave untouched (passed through as `--exclude-repo`). |
 | `branch` | No | `"pre-commit-autoupdate"` | Branch name for the autoupdate pull request. |
 | `labels` | No | `"maintenance"` | Labels to apply to the pull request. |
 | `dry-run` | No | `"false"` | If `"true"`, passes `--dry-run` to `gh pr create` (no PR is actually opened). |
@@ -159,7 +162,11 @@ ______________________________________________________________________
 
 Runs `poetry update` under a minimum-release-age cooldown and opens a pull request with the `poetry.lock` changes — or, if a lock-update PR is already open, force-pushes the refreshed lock file to it instead of opening a duplicate. Requires `base-setup` to run before this action. Optionally generates a GitHub App token for authenticated pushes.
 
+This action also owns the Poetry version: it bumps the poetry hook in `.pre-commit-config.yaml` to the newest release that satisfies the cooldown (via `prek update --repo`), reinstalls that Poetry, and regenerates the lock with it. The version bump and the lock change therefore land together in one PR, because Poetry stamps its own version into `poetry.lock` and `base-setup` derives CI's Poetry from the same hook. `pre-commit-autoupdate` leaves the poetry hook alone so the two never diverge.
+
 If the cooldown blocks every version satisfying a dependency constraint, the resolve retries with the cooldown waived for just the blocking packages, up to 5 attempts. A genuine dependency conflict still fails the run. Waivers are listed in a `## Cooldown waived` section of the pull request body; those packages are locked at versions that have not met the cooldown, so review them accordingly.
+
+The pull request body lists the Poetry version bump (if any) under a `## Poetry version` heading.
 
 **Inputs**
 
