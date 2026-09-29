@@ -106,7 +106,7 @@ ______________________________________________________________________
 
 Installs [prek](https://prek.j178.dev), runs `prek auto-update` with a configurable cooldown, and opens a pull request with the changes. Optionally generates a GitHub App token for authenticated pushes.
 
-The poetry hook is excluded by default. Its version is coupled to `poetry.lock` (via `base-setup`), so it is bumped by `poetry-lock-update` instead — that keeps the toolchain and the lock in sync and avoids autoupdate PRs that fail the `poetry-lock` hook. Pass `exclude-repos` to change which repositories are left untouched.
+The poetry hook is always excluded — in whatever URL form the config uses (`https`, `ssh`, with or without `.git`). Its version is coupled to `poetry.lock` (via `base-setup`), so it is bumped by `poetry-lock-update` instead — that keeps the toolchain and the lock in sync and avoids autoupdate PRs that fail the `poetry-lock` hook. Pass `exclude-repos` to leave any additional repositories untouched.
 
 **Inputs**
 
@@ -115,7 +115,7 @@ The poetry hook is excluded by default. Its version is coupled to `poetry.lock` 
 | `app-id` | No | `""` | GitHub App ID for authenticated pushes. Falls back to `github.token` if not provided. |
 | `app-private-key` | No | `""` | GitHub App private key for authenticated pushes. |
 | `cooldown-days` | No | `"7"` | Minimum release age in days before updating to a new version. |
-| `exclude-repos` | No | `"https://github.com/python-poetry/poetry https://github.com/python-poetry/poetry.git"` | Space-separated list of hook repositories to leave untouched (passed through as `--exclude-repo`). |
+| `exclude-repos` | No | `""` | Space-separated list of additional hook repositories to leave untouched (passed through as `--exclude-repo`). The configured poetry hook is always excluded, in whatever URL form it uses. |
 | `branch` | No | `"pre-commit-autoupdate"` | Branch name for the autoupdate pull request. |
 | `labels` | No | `"maintenance"` | Labels to apply to the pull request. |
 | `dry-run` | No | `"false"` | If `"true"`, passes `--dry-run` to `gh pr create` (no PR is actually opened). |

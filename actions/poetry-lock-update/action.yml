@@ -96,7 +96,15 @@ runs:
         POETRY_OLD: ${{ steps.poetry-version.outputs.old }}
         POETRY_NEW: ${{ steps.poetry-version.outputs.new }}
       run: |
-        if git diff --quiet -- poetry.lock .pre-commit-config.yaml prek.toml; then
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        git checkout -B "$BRANCH"
+
+        # stage_update.sh stages poetry.lock and the hook config and commits
+        # them together, so the regenerated lock and the Poetry version bump
+        # land in the same commit (and PR).
+        if [ "$(bash "${{ github.action_path }}/stage_update.sh")" = "unchanged" ]; then
           echo "No changes detected, skipping PR creation"
           exit 0
         fi
@@ -125,15 +133,6 @@ runs:
           fi
           BODY="${BODY}## Cooldown waived"$'\n\n'"${WAIVED_LIST}"
         fi
-
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-        git checkout -B "$BRANCH"
-        git add poetry.lock
-        git add .pre-commit-config.yaml 2>/dev/null || true
-        git add prek.toml 2>/dev/null || true
-        git commit -m "chore: update poetry.lock"
 
         # Branch is exclusively bot-owned and rebuilt fresh from the base
         # every run, so overwriting whatever is currently on the remote
