@@ -37,7 +37,7 @@ runs:
       shell: bash
       env:
         VERSION: ${{ inputs.version }}
-      run: npm install -g --silent "markdown-link-check@$VERSION"
+      run: npm install -g --silent "markdown-link-check@$VERSION" # zizmor: ignore[adhoc-packages]
 
     - name: Check links
       shell: bash
