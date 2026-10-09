@@ -1,15 +1,18 @@
-## 1.8.0
+## 1.9.0
+
+### Enhancements Made
+
+- feat: add markdown-link-check action
+  - PR: #78
 
 ### Maintenance and upkeep improvements
 
 - chore: update poetry.lock
-  - PR: #72
+  - PR: #76
 - chore: pre-commit autoupdate
-  - PR: #73
-- feat: move Poetry version ownership to poetry-lock-update
-  - PR: #74
+  - PR: #77
 
 ### Dependency updates
 
 - chore(deps): bump the actions group across 1 directory with 2 updates
-  - PR: #71
+  - PR: #75
