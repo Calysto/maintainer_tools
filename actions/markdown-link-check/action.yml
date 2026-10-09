@@ -1,0 +1,55 @@
+name: Markdown Link Check
+description: Check markdown links with markdown-link-check, merging a repo-root .markdown_link_config.json with Calysto defaults
+
+inputs:
+  version:
+    required: false
+    default: "3.15.0"
+    description: "markdown-link-check npm package version to install"
+  folder-path:
+    required: false
+    default: "."
+    description: "Root folder to scan recursively for markdown files"
+  ignore-paths:
+    required: false
+    default: "node_modules,.git"
+    description: "Comma-separated paths to skip (passed to markdown-link-check's -i)"
+  use-quiet-mode:
+    required: false
+    default: "no"
+    description: "Use yes to list only errors instead of every checked link"
+
+runs:
+  using: composite
+  steps:
+    - name: Merge link-check config
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        USER_CONFIG: ${{ github.workspace }}/.markdown_link_config.json
+        MERGED_CONFIG: ${{ runner.temp }}/mlc_config.json
+      run: |
+        python3 "$ACTION_PATH/merge_config.py" \
+          --user-config "$USER_CONFIG" \
+          --output "$MERGED_CONFIG"
+
+    - name: Install markdown-link-check
+      shell: bash
+      run: npm install -g --silent "markdown-link-check@${{ inputs.version }}"
+
+    - name: Check links
+      shell: bash
+      env:
+        MERGED_CONFIG: ${{ runner.temp }}/mlc_config.json
+        FOLDER_PATH: ${{ inputs.folder-path }}
+        IGNORE_PATHS: ${{ inputs.ignore-paths }}
+        QUIET: ${{ inputs.use-quiet-mode }}
+      run: |
+        args=(--config "$MERGED_CONFIG")
+        if [ "$QUIET" = "yes" ]; then
+          args+=(--quiet)
+        fi
+        if [ -n "$IGNORE_PATHS" ]; then
+          args+=(-i "$IGNORE_PATHS")
+        fi
+        markdown-link-check "${args[@]}" "$FOLDER_PATH"
