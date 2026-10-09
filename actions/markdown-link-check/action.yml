@@ -35,7 +35,9 @@ runs:
 
     - name: Install markdown-link-check
       shell: bash
-      run: npm install -g --silent "markdown-link-check@${{ inputs.version }}"
+      env:
+        VERSION: ${{ inputs.version }}
+      run: npm install -g --silent "markdown-link-check@$VERSION"
 
     - name: Check links
       shell: bash

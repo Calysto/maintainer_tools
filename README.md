@@ -388,7 +388,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@v1
 ```
 
-**Providing custom release notes**
+#### Providing custom release notes
 
 By default the action auto-generates the changelog from PR titles and labels. Pass `changelog_body` to supply your own release notes instead.
 

@@ -77,4 +77,10 @@ check_fails "non-list ignorePatterns fails" "$TMPDIR/bad-patterns.json"
 echo '{"ignorePatterns": ["^https://example.com"]}' > "$TMPDIR/bad-pattern-entries.json"
 check_fails "non-object ignorePatterns entry fails" "$TMPDIR/bad-pattern-entries.json"
 
+echo '{"ignorePatterns": [{}]}' > "$TMPDIR/empty-pattern-object.json"
+check_fails "ignorePatterns entry missing pattern fails" "$TMPDIR/empty-pattern-object.json"
+
+echo '{"ignorePatterns": [{"pattern": 123}]}' > "$TMPDIR/non-string-pattern.json"
+check_fails "ignorePatterns entry with non-string pattern fails" "$TMPDIR/non-string-pattern.json"
+
 exit $FAIL

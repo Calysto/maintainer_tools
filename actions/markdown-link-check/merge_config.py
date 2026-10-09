@@ -37,15 +37,20 @@ def load_user_config(path: str) -> dict:
     return data
 
 
+def is_ignore_pattern(entry: object) -> bool:
+    """Return True for a {'pattern': <str>} object, the only shape MLC accepts."""
+    return isinstance(entry, dict) and isinstance(entry.get("pattern"), str)
+
+
 def merge_config(user: dict) -> dict:
     """Shallow-merge user settings over the defaults, unioning ignorePatterns."""
     merged = {**DEFAULT_CONFIG, **user}
 
     user_patterns = user.get("ignorePatterns", [])
     if not isinstance(user_patterns, list) or not all(
-        isinstance(entry, dict) for entry in user_patterns
+        is_ignore_pattern(entry) for entry in user_patterns
     ):
-        sys.exit("ERROR: ignorePatterns must be a list of {'pattern': ...} objects")
+        sys.exit("ERROR: ignorePatterns must be a list of {'pattern': <string>} objects")
 
     patterns = list(DEFAULT_CONFIG["ignorePatterns"])
     seen = {json.dumps(entry, sort_keys=True) for entry in patterns}
