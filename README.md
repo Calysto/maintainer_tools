@@ -388,7 +388,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@v1
 ```
 
-**Providing custom release notes**
+#### Providing custom release notes
 
 By default the action auto-generates the changelog from PR titles and labels. Pass `changelog_body` to supply your own release notes instead.
 
@@ -570,6 +570,54 @@ jobs:
 ```
 
 To customize the rules, add a `.github/zizmor.yml` to your repository — it will be used instead of the bundled default.
+
+______________________________________________________________________
+
+### `markdown-link-check`
+
+Checks the links in every `.md` file in the repository using [`markdown-link-check`](https://github.com/tcort/markdown-link-check). Dead links fail the job.
+
+Bundled defaults ignore `^https://github.com` and `^https://nbviewer.org/` links, retry on HTTP `429`, and treat `200`, `206`, and `403` as alive. If the repository has a `.markdown_link_config.json` at its root, it is merged with those defaults: its top-level keys override the defaults, while `ignorePatterns` is the **union** of the default and user patterns (defaults first, duplicates removed). A missing config file is fine; note that the default ignore patterns cannot be removed.
+
+**Inputs**
+
+| Name | Required | Default | Description |
+|------|----------|---------|-------------|
+| `version` | No | `"3.15.0"` | `markdown-link-check` npm package version to install. |
+| `folder-path` | No | `"."` | Root folder to scan recursively for markdown files. |
+| `ignore-paths` | No | `"node_modules,.git"` | Comma-separated paths to skip. |
+| `use-quiet-mode` | No | `"no"` | Use `yes` to list only errors instead of every checked link. |
+
+**Usage**
+
+```yaml
+- uses: actions/checkout@v6
+  with:
+    persist-credentials: false
+- uses: calysto/maintainer_tools/actions/markdown-link-check@v1
+```
+
+Typically used in a workflow triggered on `push` and `pull_request` events:
+
+```yaml
+jobs:
+  markdown-link-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: calysto/maintainer_tools/actions/markdown-link-check@v1
+```
+
+To extend the defaults, add a `.markdown_link_config.json` to your repository:
+
+```json
+{
+  "ignorePatterns": [{ "pattern": "^https://example.com" }],
+  "aliveStatusCodes": [200, 206, 403, 429]
+}
+```
 
 ______________________________________________________________________
 

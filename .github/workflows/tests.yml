@@ -115,6 +115,8 @@ jobs:
         run: bash actions/poetry-lock-update/test_resolve_lock.sh
       - name: Test get_poetry_version.py
         run: bash actions/base-setup/test_get_poetry_version.sh
+      - name: Test merge_config.py
+        run: bash actions/markdown-link-check/test_merge_config.sh
 
   test_pre_commit_autoupdate:
     if: github.event_name != 'schedule' || github.repository == 'Calysto/maintainer_tools'
@@ -154,6 +156,18 @@ jobs:
           persist-credentials: false
       - uses: $/actions/pre-commit-run
 
+  test_markdown_link_check:
+    if: github.event_name != 'schedule' || github.repository == 'Calysto/maintainer_tools'
+    name: Test Markdown Link Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/actions/markdown-link-check
+      - name: Test scanning behavior with fixtures
+        run: bash actions/markdown-link-check/test_action.sh
+
   static:
     if: github.event_name != 'schedule' || github.repository == 'Calysto/maintainer_tools'
     runs-on: ubuntu-latest
@@ -185,6 +199,7 @@ jobs:
       - test_pre_commit_autoupdate
       - test_poetry_lock_update
       - test_pre_commit_run
+      - test_markdown_link_check
       - static
     runs-on: ubuntu-latest
     steps:

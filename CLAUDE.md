@@ -31,6 +31,7 @@ Each action lives in `actions/<name>/action.yml`. The actions are:
 - **`release`** — Full release pipeline: bumps version via Poetry, generates and writes CHANGELOG.md, commits and pushes, creates GitHub release, then bumps to next `.dev` version using `actions/release/bump_dev.py`. Supports dry-run. Requires a GitHub App (`APP_ID` / `APP_PRIVATE_KEY`) for authenticated pushes.
 - **`test-minimum-versions`** — Rewrites `pyproject.toml` to pin all deps to their minimum declared versions, then runs the test suite.
 - **`test-sdist`** — Downloads the `Packages` artifact from `hynek/build-and-inspect-python-package`, unpacks the sdist, and runs the test suite from within it.
+- **`markdown-link-check`** — Checks links in every `.md` file using `markdown-link-check`. Bundled defaults ignore `^https://github.com` and `^https://nbviewer.org/`, retry on HTTP 429, and treat 200/206/403 as alive. A repo-root `.markdown_link_config.json` is merged in: its top-level keys override the defaults, while `ignorePatterns` is the union of the default and user patterns. Dead links fail the job.
 
 ### Release workflow
 
