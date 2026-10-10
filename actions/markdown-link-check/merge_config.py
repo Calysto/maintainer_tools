@@ -17,6 +17,7 @@ DEFAULT_CONFIG = {
     "ignorePatterns": [
         {"pattern": "^https://github.com"},
         {"pattern": "^https://nbviewer.org/"},
+        {"pattern": "^https://nbviewer.jupyter.org/"},
     ],
     "retryOn429": True,
     "aliveStatusCodes": [200, 206, 403],
