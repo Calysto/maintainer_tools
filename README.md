@@ -118,7 +118,7 @@ The poetry hook is always excluded — in whatever URL form the config uses (`ht
 | `exclude-repos` | No | `""` | Space-separated list of additional hook repositories to leave untouched (passed through as `--exclude-repo`). The configured poetry hook is always excluded, in whatever URL form it uses. |
 | `branch` | No | `"pre-commit-autoupdate"` | Branch name for the autoupdate pull request. |
 | `labels` | No | `"maintenance"` | Labels to apply to the pull request. |
-| `auto-merge` | No | `"false"` | If `"true"`, enable auto-merge (squash) on the pull request so it merges automatically once required checks pass. Requires "Allow auto-merge" to be enabled in the repository settings. |
+| `auto-merge` | No | `"false"` | If `"true"`, approve the pull request and enable auto-merge (squash) so it merges once required checks pass. The PR is authored by the GitHub App, which cannot approve its own PR, so approval is submitted with the workflow token — the caller must grant the workflow `pull-requests: write`. Requires "Allow auto-merge" to be enabled in the repository settings. |
 | `dry-run` | No | `"false"` | If `"true"`, passes `--dry-run` to `gh pr create` (no PR is actually opened). |
 
 **Usage**
@@ -178,7 +178,7 @@ The pull request body lists the Poetry version bump (if any) under a `## Poetry 
 | `min-release-age-days` | No | `"7"` | Minimum release age in days before Poetry's resolver will consider a version. |
 | `branch` | No | `"poetry-lock-update"` | Branch name for the update pull request. Reused across runs — an existing open PR on this branch is updated in place rather than duplicated. This branch is exclusively managed by this action and force-pushed on every run, so manual commits pushed to it will not survive. |
 | `labels` | No | `"maintenance"` | Labels to apply to the pull request. |
-| `auto-merge` | No | `"false"` | If `"true"`, enable auto-merge (squash) on the pull request so it merges automatically once required checks pass. Requires "Allow auto-merge" to be enabled in the repository settings. |
+| `auto-merge` | No | `"false"` | If `"true"`, approve the pull request and enable auto-merge (squash) so it merges once required checks pass. The PR is authored by the GitHub App, which cannot approve its own PR, so approval is submitted with the workflow token — the caller must grant the workflow `pull-requests: write`. Requires "Allow auto-merge" to be enabled in the repository settings. |
 | `dry-run` | No | `"false"` | If `"true"`, no push or PR mutation happens: `gh pr create` runs with `--dry-run` when no PR is open, or a "would update" message prints when one is. |
 
 **Usage**

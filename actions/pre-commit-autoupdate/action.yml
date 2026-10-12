@@ -88,6 +88,8 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        WORKFLOW_TOKEN: ${{ github.token }}
         BRANCH: ${{ inputs.branch }}
         LABELS: ${{ inputs.labels }}
         AUTO_MERGE: ${{ inputs.auto-merge }}
@@ -132,6 +134,4 @@ runs:
           --head "$FULL_BRANCH" \
           $DRY_RUN_FLAG
 
-        if [ "$AUTO_MERGE" = "true" ] && [ "$DRY_RUN" != "true" ]; then
-          gh pr merge "$FULL_BRANCH" --auto --squash --delete-branch
-        fi
+        bash "${{ github.action_path }}/../common/auto_merge.sh" "$FULL_BRANCH"
