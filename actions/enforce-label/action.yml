@@ -24,9 +24,9 @@ runs:
         GH_TOKEN: ${{ github.token }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
+        REQUIRED_LABELS: ${{ inputs.required-labels }}
+        ATTEMPTS: ${{ inputs.attempts }}
+        WAIT_SECONDS: ${{ inputs.wait-seconds }}
       run: |
         bash "${{ github.action_path }}/wait_for_label.sh" \
-          "$PR_NUMBER" \
-          "${{ inputs.required-labels }}" \
-          "${{ inputs.attempts }}" \
-          "${{ inputs.wait-seconds }}"
+          "$PR_NUMBER" "$REQUIRED_LABELS" "$ATTEMPTS" "$WAIT_SECONDS"
