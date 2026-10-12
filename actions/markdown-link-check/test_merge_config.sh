@@ -32,7 +32,7 @@ check_fails() {
   fi
 }
 
-DEFAULTS='{"ignorePatterns":[{"pattern":"^https://github.com"},{"pattern":"^https://nbviewer.org/"}],"retryOn429":true,"aliveStatusCodes":[200,206,403]}'
+DEFAULTS='{"ignorePatterns":[{"pattern":"^https://github.com"},{"pattern":"^https://nbviewer.org/"},{"pattern":"^https://nbviewer.jupyter.org/"}],"retryOn429":true,"aliveStatusCodes":[200,206,403]}'
 
 python3 "$SCRIPT" --user-config "$TMPDIR/missing.json" --output "$TMPDIR/out.json" >/dev/null
 check "missing user config -> defaults" "$DEFAULTS" "$TMPDIR/out.json"
@@ -46,7 +46,7 @@ cat > "$TMPDIR/union.json" <<'EOF'
 EOF
 python3 "$SCRIPT" --user-config "$TMPDIR/union.json" --output "$TMPDIR/out.json" >/dev/null
 check "user pattern is unioned after defaults" \
-  '{"ignorePatterns":[{"pattern":"^https://github.com"},{"pattern":"^https://nbviewer.org/"},{"pattern":"^https://example.com"}],"retryOn429":true,"aliveStatusCodes":[200,206,403]}' \
+  '{"ignorePatterns":[{"pattern":"^https://github.com"},{"pattern":"^https://nbviewer.org/"},{"pattern":"^https://nbviewer.jupyter.org/"},{"pattern":"^https://example.com"}],"retryOn429":true,"aliveStatusCodes":[200,206,403]}' \
   "$TMPDIR/out.json"
 
 cat > "$TMPDIR/dupe.json" <<'EOF'
@@ -54,7 +54,7 @@ cat > "$TMPDIR/dupe.json" <<'EOF'
 EOF
 python3 "$SCRIPT" --user-config "$TMPDIR/dupe.json" --output "$TMPDIR/out.json" >/dev/null
 check "user pattern matching a default is de-duplicated" \
-  '{"ignorePatterns":[{"pattern":"^https://github.com"},{"pattern":"^https://nbviewer.org/"}],"retryOn429":true,"aliveStatusCodes":[200,206,403]}' \
+  '{"ignorePatterns":[{"pattern":"^https://github.com"},{"pattern":"^https://nbviewer.org/"},{"pattern":"^https://nbviewer.jupyter.org/"}],"retryOn429":true,"aliveStatusCodes":[200,206,403]}' \
   "$TMPDIR/out.json"
 
 cat > "$TMPDIR/override.json" <<'EOF'
@@ -62,7 +62,7 @@ cat > "$TMPDIR/override.json" <<'EOF'
 EOF
 python3 "$SCRIPT" --user-config "$TMPDIR/override.json" --output "$TMPDIR/out.json" >/dev/null
 check "user keys override defaults and add new keys" \
-  '{"ignorePatterns":[{"pattern":"^https://github.com"},{"pattern":"^https://nbviewer.org/"}],"retryOn429":false,"aliveStatusCodes":[200,206,403],"timeout":"30s"}' \
+  '{"ignorePatterns":[{"pattern":"^https://github.com"},{"pattern":"^https://nbviewer.org/"},{"pattern":"^https://nbviewer.jupyter.org/"}],"retryOn429":false,"aliveStatusCodes":[200,206,403],"timeout":"30s"}' \
   "$TMPDIR/out.json"
 
 echo '{not json' > "$TMPDIR/invalid.json"
