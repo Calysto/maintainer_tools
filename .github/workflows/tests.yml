@@ -119,6 +119,8 @@ jobs:
         run: bash actions/base-setup/test_get_poetry_version.sh
       - name: Test merge_config.py
         run: bash actions/markdown-link-check/test_merge_config.sh
+      - name: Test wait_for_label.sh
+        run: bash actions/enforce-label/test_wait_for_label.sh
 
   test_pre_commit_autoupdate:
     if: github.event_name != 'schedule' || github.repository == 'Calysto/maintainer_tools'

@@ -225,14 +225,19 @@ ______________________________________________________________________
 
 Enforces that every PR has at least one of the required labels: `bug`, `enhancement`, `dependencies`, `maintenance`, `documentation`.
 
+If the PR has no required label, the action waits and re-checks before failing, giving the author a grace period to apply a label after opening the PR.
+
 **Inputs**
 
-None.
+| Name | Required | Default | Description |
+|------|----------|---------|-------------|
+| `required-labels` | No | `"bug,enhancement,dependencies,maintenance,documentation"` | Comma-separated labels, at least one of which the pull request must have. |
+| `wait-seconds` | No | `"60"` | Seconds to wait before re-checking when no required label is present yet. |
+| `attempts` | No | `"2"` | Number of times to check for a required label before failing. |
 
 **Usage**
 
 ```yaml
-- uses: actions/checkout@v6
 - uses: calysto/maintainer_tools/actions/enforce-label@v1
 ```
 
@@ -246,8 +251,9 @@ on:
 jobs:
   enforce-label:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
     steps:
-      - uses: actions/checkout@v6
       - uses: calysto/maintainer_tools/actions/enforce-label@v1
 ```
 
