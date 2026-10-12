@@ -22,6 +22,10 @@ inputs:
     required: false
     default: "maintenance"
     description: "Labels to apply to the pull request"
+  auto-merge:
+    required: false
+    default: "false"
+    description: "If 'true', enable auto-merge (squash) so the pull request merges once required checks pass"
   dry-run:
     required: false
     default: "false"
@@ -88,8 +92,11 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        WORKFLOW_TOKEN: ${{ github.token }}
         BRANCH: ${{ inputs.branch }}
         LABELS: ${{ inputs.labels }}
+        AUTO_MERGE: ${{ inputs.auto-merge }}
         DRY_RUN: ${{ inputs.dry-run }}
         OLD_LOCK: ${{ runner.temp }}/poetry.lock.before
         WAIVED: ${{ steps.resolve.outputs.waived }}
@@ -144,3 +151,5 @@ runs:
 
         bash "${{ github.action_path }}/decide_pr_action.sh" \
           "$BRANCH" "chore: update poetry.lock" "$BODY" "$LABELS" "$DRY_RUN"
+
+        bash "${{ github.action_path }}/../common/auto_merge.sh" "$BRANCH"
