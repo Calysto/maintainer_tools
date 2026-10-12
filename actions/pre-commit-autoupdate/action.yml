@@ -30,6 +30,10 @@ inputs:
     required: false
     default: "maintenance"
     description: "Labels to apply to the pull request"
+  auto-merge:
+    required: false
+    default: "false"
+    description: "If 'true', enable auto-merge (squash) so the pull request merges once required checks pass"
   dry-run:
     required: false
     default: "false"
@@ -86,6 +90,7 @@ runs:
         GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
         BRANCH: ${{ inputs.branch }}
         LABELS: ${{ inputs.labels }}
+        AUTO_MERGE: ${{ inputs.auto-merge }}
         DRY_RUN: ${{ inputs.dry-run }}
       run: |
         if git diff --quiet; then
@@ -126,3 +131,7 @@ runs:
           --label "$LABELS" \
           --head "$FULL_BRANCH" \
           $DRY_RUN_FLAG
+
+        if [ "$AUTO_MERGE" = "true" ] && [ "$DRY_RUN" != "true" ]; then
+          gh pr merge "$FULL_BRANCH" --auto --squash --delete-branch
+        fi
