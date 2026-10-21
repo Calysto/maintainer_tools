@@ -1,11 +1,16 @@
-## 1.10.1
+## 1.10.2
+
+### Bugs Fixed
+
+- fix: actually enable auto-merge on update PRs
+  - PR: #87
 
 ### Maintenance and upkeep improvements
 
-- feat: wait for a label before failing enforce-label
-  - PR: #84
+- chore: update poetry.lock
+  - PR: #85
 
 ### Dependency updates
 
-- chore(deps): bump dependabot/fetch-metadata from 2.5.0 to 3.1.0 in the actions group across 1 directory
-  - PR: #83
+- chore(deps): bump the actions group across 2 directories with 3 updates
+  - PR: #86
