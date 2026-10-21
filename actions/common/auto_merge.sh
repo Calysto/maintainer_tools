@@ -31,7 +31,11 @@ fi
 # The branch (and its PR) may be reused across runs, so only enable auto-merge
 # when it is not already enabled, since re-enabling it errors. A failed lookup
 # must fail the step rather than silently skipping the merge.
-AUTO_MERGE_REQUEST=$(gh pr view "$BRANCH" --json autoMergeRequest --jq '.autoMergeRequest') || exit $?
-if [ "$AUTO_MERGE_REQUEST" = "null" ]; then
+#
+# Compare against a boolean rather than `null`: gh's built-in --jq prints an
+# empty string for a JSON null (unlike jq, which prints "null"), so testing for
+# "null" never matches and auto-merge would be silently skipped.
+AUTO_MERGE_ENABLED=$(gh pr view "$BRANCH" --json autoMergeRequest --jq '.autoMergeRequest != null') || exit $?
+if [ "$AUTO_MERGE_ENABLED" != "true" ]; then
   gh pr merge "$BRANCH" --auto --squash --delete-branch
 fi
